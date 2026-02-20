@@ -329,16 +329,21 @@ const saveAll = async () => {
   loading.value = false;
 };
 
-function goToPrint() {
-  //if (!lastRootId.value) {
-    //alert("❌ Нет данных для печати. Сначала сохраните основное изделие.");
-    //return;
-  //}
-  const id = route.params.id;
+//console.log("FFFFFF", assembly);
+console.log(route.query, route.params)
 
-  // Переходим на страницу печати сборки
-  window.location.href = `/norm/order-norm/print/${id}`;
-}
+const goToPrint = () => {
+  const id = route.params.id;
+  const orderNum = route.query.order_num; // Берем из текущего URL
+
+  router.push({
+    name: 'FormPrintNorm',
+    params: {
+      id: id,
+      orderNum: orderNum,
+    },
+  });
+};
 
 // --- Возврат ---
 const goBack = () => {

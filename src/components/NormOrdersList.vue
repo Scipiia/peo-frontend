@@ -160,7 +160,13 @@ const fetchOrders = async () => {
 
 // Переход к нормировке
 const goToNormirovka = (order) => {
-  router.push(`/norm/orders/order-norm/edit/${order.id}`);
+  //router.push(`/norm/orders/order-norm/edit/${order.id}`);
+  console.log("ORDEEEER",order.order_num);
+  router.push({
+    name: 'EditNormOrder',
+    params: {id: order.id},
+    query: {order_num: order.order_num}
+  })
 };
 
 const goToWorkers = (order) => {
