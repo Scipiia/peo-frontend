@@ -75,7 +75,7 @@
               <select v-model="executor.employee_id" class="select-employee">
                 <option value="">— выберите —</option>
                 <option
-                    v-for="emp in employees"
+                    v-for="emp in getEmployeesForType(item.type)"
                     :key="emp.id"
                     :value="emp.id"
                     :disabled="isExecutorSelected(op.executors, emp.id, executor)"
@@ -145,9 +145,11 @@ const router = useRouter();
 
 // Состояние
 const assembly = ref(null);       // вся сборка: main + subs
-const employees = ref([]);        // список сотрудников
+//const employees = ref([]);
 const loading = ref(false);
 const dateAccounting = ref('');
+const employeesByType = ref({}); // список сотрудников
+const employeesLoading = ref({}); // 👈 Новый реактивный объект для статусов
 
 const isExecutorSelected = (executors, empId, currentExecutor) => {
   return executors.some(ex =>
@@ -167,6 +169,8 @@ onMounted(async () => {
     const assemblyRes = await fetch(`/api/orders/order-norm/${id}`);
     if (!assemblyRes.ok) throw new Error('Не удалось загрузить сборку');
     const data = await assemblyRes.json();
+
+    console.log("DASDSS", data);
 
     const processedItems = data.map(item => ({
       ...item,
@@ -227,13 +231,55 @@ onMounted(async () => {
   dateAccounting.value = accountingDate;
 
   // Загрузка сотрудников
-  try {
-    const empRes = await fetch('/api/workers/all');
-    employees.value = await empRes.json();
-  } catch (err) {
-    console.error('Ошибка загрузки сотрудников:', err);
-  }
+  // try {
+  //   const empRes = await fetch('/api/workers/all');
+  //   employees.value = await empRes.json();
+  //
+  //   console.log("EMPP", employees.value);
+  // } catch (err) {
+  //   console.error('Ошибка загрузки сотрудников:', err);
+  // }
 });
+
+const loadEmployeesForType = async (type) => {
+  // Если уже загружено или в процессе загрузки — не дёргаем API
+ // const normalizedType = type || '';
+
+  if (employeesByType.value[type] || employeesLoading.value[type]) {
+    return;
+  }
+
+  employeesLoading.value[type] = true;
+
+
+  console.log(`🔍 Загрузка сотрудников для типа: "${type}" (typeof: ${typeof type})`);
+
+  try {
+    // 👈 Ключевое изменение: передаём type в запрос
+    const res = await fetch(`/api/workers/all?type=${type}`);
+    console.log(`🌐 Запрос: ${res}`);
+
+    if (!res.ok) throw new Error('Не удалось загрузить сотрудников');
+    employeesByType.value[type] = await res.json();
+
+    console.log("emploo", employeesByType.value)
+  } catch (err) {
+    console.error(`Ошибка загрузки сотрудников для ${type}:`, err);
+    employeesByType.value[type] = []; // fallback
+  } finally {
+    employeesLoading.value[type] = false
+  }
+};
+
+// Хелпер для шаблона: возвращает список + триггерит загрузку при необходимости
+const getEmployeesForType = (type) => {
+  if (!employeesByType.value[type] && !employeesLoading.value[type]) {
+    loadEmployeesForType(type); // запускаем загрузку
+  }
+
+  console.log("GETEMP", employeesByType.value);
+  return employeesByType.value[type] || [];
+};
 
 // --- Все наряды ---
 const allItems = computed(() => {

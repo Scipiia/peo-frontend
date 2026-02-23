@@ -33,6 +33,12 @@
         />
       </div>
 
+      <div class="actions">
+        <button @click="exportToExcel" class="btn-export">
+          Экспорт в Excel
+        </button>
+      </div>
+
       <!-- Типы продукции -->
       <div class="type-filters">
         <label v-for="(group, key) in typeGroups" :key="key" class="checkbox-label">
@@ -66,98 +72,54 @@
         <thead>
         <tr>
           <th>Статус</th>
-          <th>Позиция</th>
           <th>№</th>
-          <th>Спецификация</th>
-          <th>№ заказа</th>
-          <th>корп/дил</th>
-          <th>Заказчик</th>
-          <th>Вид продукции</th>
-          <th>Система</th>
-          <th>Наименование</th>
-          <th>Профиль</th>
-          <th>Кол-во</th>
-          <th>Площадь</th>
-          <th>Н/час</th>
-          <th>Изготовитель</th>
-          <th>Н/руб</th>
-          <th v-for="emp in employees" :key="emp.id" class="employee-col">
+
+          <!-- Динамические колонки -->
+          <th
+              v-for="col in dynamicColumns"
+              :key="col.key"
+              :style="{ minWidth: col.width, textAlign: col.align || 'left' }"
+              class="dynamic-col"
+          >
+            {{ col.label }}
+          </th>
+
+          <!-- Колонки сотрудников -->
+          <th
+              v-for="emp in employees"
+              :key="emp.id"
+              class="employee-col"
+          >
             {{ emp.name }}
           </th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="prod in filteredProductsWithRowNumber"
-            :key="prod.id"
-            @click="() => openEditModal(prod)"
-            class="clickable-row"
-        >
-          <td>
-            <span :class="`status-badge status-${prod.status}`">{{ getTypeStatus(prod.status) }}</span>
-          </td>
-          <td>{{ prod.position }}</td>
-          <td>{{ prod.rowNumber }}</td>
-          <td>{{ prod.parent_assembly }}</td>
-          <td>{{ prod.order_num }}</td>
-          <td
-              :class="{
-                'profile-empty': prod.customer_type === '',
-                'cell-warning': prod.customer_type === ''
-            }"
-          >
-            {{ prod.customer_type }}
-          </td>
-          <td>{{ prod.customer }}</td>
-          <td>{{ formatType(prod.type) }}</td>
-          <td
-              :class="{
-                'profile-empty': prod.systema === '',
-                'cell-warning': prod.systema === ''
-            }"
-          >
-            {{ prod.systema }}
-          </td>
-          <td
-              :class="{
-                'profile-empty': prod.type_izd === '',
-                'cell-warning': prod.type_izd === ''
-            }"
-          >
-            {{ prod.type_izd }}
-          </td>
-          <td
-              :class="{
-                'profile-empty': prod.profile === '',
-                'cell-warning': prod.profile === ''
-            }"
-          >
-            {{ prod.profile }}
-          </td>
-          <td>{{ prod.count }}</td>
-          <td>{{ prod.sqr }}</td>
-          <td>{{ prod.total_time }}</td>
-          <td
-              :class="{
-                'profile-empty': prod.brigade === '',
-                'cell-warning': prod.brigade === ''
-            }"
-          >
-            {{ prod.brigade }}
-          </td>
-          <td>{{ prod.norm_money }}</td>
-          <td v-for="emp in employees" :key="emp.id" class="employee-col">
-            {{ getValue(prod, emp.id) }}
-          </td>
-        </tr>
+          <tr v-for="prod in filteredProductsWithRowNumber" :key="prod.id" class="clickable-row" @click="() => openEditModal(prod)">
+                <!-- Статические колонки (всегда в начале) -->
+            <td>
+              <span :class="`status-badge status-${prod.status}`">
+                {{ getTypeStatus(prod.status) }}
+              </span>
+            </td>
+            <td>{{ prod.rowNumber }}</td>
+
+              <!-- 👇 ДИНАМИЧЕСКИЕ КОЛОНКИ (порядок из computed) -->
+            <td
+                v-for="col in dynamicColumns"
+                :key="col.key"
+                :style="{ textAlign: col.align || 'left' }"
+                :class="{ 'cell-empty': getValueByColumn(prod, col.key) === '—' }"
+            >
+              {{ getValueByColumn(prod, col.key) }}
+            </td>
+              <!-- Статические колонки (в конце) -->
+            <td v-for="emp in employees" :key="emp.id" class="employee-col">
+              {{ getValue(prod, emp.id) }}
+            </td>
+          </tr>
         </tbody>
       </table>
-    </div>
-
-    <!-- Кнопка экспорта -->
-    <div class="actions">
-      <button @click="exportToExcel" class="btn-export">
-         Экспорт в Excel
-      </button>
     </div>
   </div>
 </template>
@@ -165,7 +127,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import ExcelJS from 'exceljs';
 
 const currentYear = new Date().getFullYear();
 const year = ref(currentYear); // можно добавить выбор года, если нужно
@@ -242,11 +203,109 @@ const typeGroups = {
     label: 'Лоджии',
     types: ['loggia']
   },
+  vitrage: {
+    label: 'Витраж',
+    types: ['vitrage']
+  },
   mosquito_net: {
     label: 'Москитные сетки',
     types: ['ms']
   }
 };
+
+// TODO динамические колонки
+
+// Вычисляем, какие колонки показывать, на основе выбранных типов
+const dynamicColumns = computed(() => {
+  const selected = activeBackendTypes.value;
+  const hasWindows = selected.some(t => ['window', 'door', 'glyhar'].includes(t));
+  const hasLoggias = selected.some(t => ['loggia', 'vitrage'].includes(t));
+
+  const columns = [];
+
+  if (hasWindows) {
+    columns.push(
+        {key: 'parent_assembly', label: 'спецификация', width: '90px', align: 'center'}
+    )
+  }
+
+  if (hasLoggias) {
+    columns.push(
+        {key: 'parent_assembly', label: 'витраж', width: '90px', align: 'center'}
+    )
+  }
+
+  columns.push(
+      {key: 'order_num', label: '№ заказа', width: '100px'},
+      {key: 'customer_type', label: 'тип клиента', width: '100px'},
+      {key: 'customer', label: 'заказчик', width: '100px'},
+  )
+
+  if (hasLoggias) {
+    columns.push(
+        {key: 'type_izd', label: 'наименование', width: '90px', align: 'center'},
+        {key: 'count', label: 'количество', width: '90px', align: 'center'},
+        {key: 'sqr', label: 'площадь', width: '90px', align: 'center'},
+        {key: 'sqr_stv', label: 'площадь створки', width: '90px', align: 'center'},
+
+    )
+  }
+
+  if (hasWindows) {
+    columns.push(
+        {key: 'type', label: 'вид продукции', width: '90px', align: 'center'},
+        {key: 'systema', label: 'система', width: '90px', align: 'center'},
+        {key: 'type_izd', label: 'наименование', width: '90px', align: 'center'},
+        {key: 'profile', label: 'профиль', width: '90px', align: 'center'},
+        {key: 'count', label: 'количество', width: '90px', align: 'center'},
+    )
+  }
+
+
+  columns.push(
+      { key: 'norm_money', label: 'Н/руб', width: '80px', align: 'center' },
+      { key: 'brigade', label: 'изготовитель', width: '80px', align: 'center' },
+  );
+
+  return columns;
+});
+
+// Получает значение из объекта по ключу, например 'parent_assembly' или 'coefficient'
+const getValueByColumn = (product, columnKey) => {
+  const value = product[columnKey];
+
+  // 1. Обработка пустых значений
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+
+  // 2. Форматирование типа изделия (если колонка называется 'type')
+  if (columnKey === 'type') {
+    return formatType(value);
+  }
+
+  // 3. Форматирование чисел
+  if (typeof value === 'number') {
+    // Для денег и площадей — 3 знака после запятой
+    if (['sqr', 'sqr_stv', 'norm_money', 'total_time'].includes(columnKey)) {
+      return parseFloat(value.toFixed(3));
+    }
+    // Для количества — целое число
+    if (columnKey === 'count') {
+      return parseInt(value);
+    }
+    // Для коэффициента — 2 знака
+    if (columnKey === 'coefficient') {
+      return parseFloat(value.toFixed(3));
+    }
+    return value;
+  }
+
+  // 4. Всё остальное — как есть (строки, даты и т.д.)
+  return value;
+};
+
+//TODO
 
 const selectedTypes = ref(['combined']);
 
@@ -267,7 +326,6 @@ const activeBackendTypes = computed(() => {
 const employees = ref([]);
 const products = ref([]);
 
-// ========== ВЫЧИСЛЯЕМЫЕ СВОЙСТВА ==========
 
 // Присваиваем порядковые номера
 const productsWithRowNumber = computed(() => {
@@ -313,415 +371,24 @@ const filteredProductsWithRowNumber = computed(() => {
   return productsWithRowNumber.value.filter(p => allowedTypes.includes(p.type));
 });
 
-// ========== ФОРМАТИРОВАНИЕ ==========
 const formatType = (type) => {
+  if (!type) return '—';
+
   const map = {
     'window': 'Окно',
     'door': 'Дверь',
     'loggia': 'Лоджия',
+    'vitrage': 'Витраж',
     'ms': 'Москитная сетка',
     'glyhar': 'Глухое окно',
   };
+
   return map[type] || type;
 };
 
 const getValue = (product, employeeId) => {
   const value = product.employee_value?.[String(employeeId)];
   return value ? parseFloat(value.toFixed(3)) : '';
-};
-
-// ========== ЭКСПОРТ В EXCEL ==========
-const exportToExcel = async () => {
-  const monthName = months[month.value - 1];
-  const exportYear = year.value;
-
-  const activeType = activeBackendTypes.value;
-
-  let typeLabel = 'Все типы';
-  const combinedSet = new Set(['window', 'door', 'glyhar']);
-  const activeSet = new Set(activeType);
-
-  if (activeType.length > 4) {
-    typeLabel = 'Все типы';
-  } else if (
-      activeSet.size === combinedSet.size &&
-      [...combinedSet].every(t => activeSet.has(t))
-  ) {
-    typeLabel = 'Окна';
-  } else if (activeSet.size === 1 && activeSet.has('loggia')) {
-    typeLabel = 'Лоджии';
-  } else if (activeSet.size === 1 && activeSet.has('ms')) {
-    typeLabel = 'Москитки';
-  } else {
-    typeLabel = [...new Set(activeType.map(formatType))].sort().join(', ');
-  }
-
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet(`Отчёт ПЭО - ${monthName} ${exportYear} ${typeLabel}`);
-
-  // === 1. Заголовки основной таблицы ===
-  const headers = [
-    '№', 'Спецификация', '№ заказа', 'корп/дил', 'Заказчик',
-    'Вид продукции', 'Система', 'Наименование', 'Профиль',
-    'Количество', 'Площадь', 'Н/час', 'Изготовитель', 'Н/руб'
-  ];
-
-  const employeeNames = employees.value.map(emp => emp.name);
-  const allHeaders = [...headers, ...employeeNames, 'Итого'];
-
-  const headerRow = worksheet.addRow(allHeaders);
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, size: 10 };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
-    cell.border = { style: 'thin' };
-  });
-
-  // === 2. Данные строк ===
-  filteredProductsWithRowNumber.value.forEach(prod => {
-    const row = [
-      prod.rowNumber,
-      prod.parent_assembly || '',
-      prod.order_num || 'не определено',
-      prod.customer_type || 'не определено',
-      prod.customer || 'не определено',
-      formatType(prod.type),
-      prod.systema || 'не определено',
-      prod.type_izd || 'не определено',
-      prod.profile || 'не определено',
-      prod.count || 0,
-      prod.sqr || 0,
-      prod.total_time || 0,
-      prod.brigade || 'не определено',
-      prod.norm_money || 0
-    ];
-
-    // === Значения по сотрудникам ===
-    const employeeValues = employees.value.map(emp => {
-      const val = getValue(prod, emp.id);
-      return val ? parseFloat(val) : 0;
-    });
-
-// === Сумма по всем сотрудникам ===
-    const totalEmpValue = employeeValues.reduce((sum, val) => sum + val, 0);
-    const totalEmpFormatted = totalEmpValue > 0 ? parseFloat(totalEmpValue.toFixed(3)) : '';
-
-// === Форматированные строки для ячеек (оставляем как было, но с пустыми строками для 0) ===
-    const employeeValueCells = employees.value.map(emp => {
-      const val = getValue(prod, emp.id);
-      return val ? val : ''; // пусто, если 0 или нет значения
-    });
-
-// === Добавляем итоговый столбец после всех сотрудников ===
-    const fullRow = [
-      ...row,
-      ...employeeValueCells,
-      totalEmpFormatted
-    ];
-
-    const excelRow = worksheet.addRow(fullRow);
-    // последний столбец — итого по сотрудникам
-    if (totalEmpValue > 0 && Math.abs(totalEmpValue - (parseFloat(prod.total_time) || 0)) > 0.001) {
-      // Например, выделить жёлтым фоном
-      excelRow.eachCell((cell, colNum) => {
-        if (colNum === fullRow.length) {
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFFFFF99' }
-          };
-        }
-      });
-    }
-
-    excelRow.eachCell((cell) => {
-      cell.font = { size: 10 };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      cell.border = { style: 'thin' };
-
-      if (typeof cell.value === 'string' && cell.value === 'не определено') {
-        cell.font = { bold: true, size: 10, color: { argb: 'FFFF0000' } };
-      }
-    });
-  });
-
-  // ===  Пустая строка перед итогами ===
-  worksheet.addRow([]);
-
-  // ===  Сводная статистика (по типам) ===
-  // (оставлю для полноты, но можно закомментировать)
-
-  const products = filteredProductsWithRowNumber.value;
-
-  function normalize(str) {
-    return (str || '').trim().toLowerCase();
-  }
-
-  function aggregate(items) {
-    const total = items.reduce((acc, p) => {
-      acc.sqr += parseFloat(p.sqr) || 0;
-      acc.hours += parseFloat(p.total_time) || 0;
-      acc.money += parseFloat(p.norm_money) || 0;
-      acc.count += parseInt(p.count) || 0;
-      return acc;
-    }, { count: 0, sqr: 0, hours: 0, money: 0 });
-
-    return {
-      count: parseFloat(total.count.toFixed(3)),
-      sqr: parseFloat(total.sqr.toFixed(3)),
-      hours: parseFloat(total.hours.toFixed(3)),
-      money: parseFloat(total.money.toFixed(3))
-    };
-  }
-
-  // --- 1. Холодные и тёплые окна ---
-  const coldWindows = products.filter(p =>
-      (p.type === 'window' || p.type === 'glyhar') && normalize(p.systema).includes('х') && normalize(p.type_izd) !== 'витраж к двери'
-  );
-
-  const hotWindows = products.filter(p =>
-      (p.type === 'window' || p.type === 'glyhar') && normalize(p.systema).includes('т') && normalize(p.type_izd) !== 'витраж к двери'
-  );
-
-  // --- 2. Глухие окна (только те, где НЕ витраж к двери) ---
-  // const glyhar = products.filter(p =>
-  //     p.type === 'glyhar' &&
-  //     normalize(p.type_izd) !== 'витраж к двери'
-  // );
-
-  // --- 3. Витраж к двери (отдельно) ---
-  const vitrajDoors = products.filter(p =>
-      p.type === 'glyhar' &&
-      normalize(p.type_izd) === 'витраж к двери'
-  );
-
-  const allWindows = [...coldWindows, ...hotWindows, ...vitrajDoors];
-
-  // const coldWindows = products.filter(p =>
-  //     p.type === 'window' && normalize(p.systema).includes('х')
-  // );
-  // const hotWindows = products.filter(p =>
-  //     p.type === 'window' && normalize(p.systema).includes('т')
-  // );
-  //const allWindows = products.filter(p => p.type === 'window' || p.type === 'glyhar');
-  // const doors1p = products.filter(p => p.type === 'door' && ['1П', '1Пт'].includes(p.type_izd));
-  // const doors15p = products.filter(p => p.type === 'door' && ['1.5П', '1.5Пт'].includes(p.type_izd));
-  // const doors2p = products.filter(p => p.type === 'door' && ['2П', '2Пт'].includes(p.type_izd));
-
-  const doors1p = products.filter(p =>p.type ==='door' && (p.type_izd === '1П' || p.type_izd === '1Пт'));
-  const doors15p = products.filter(p =>p.type ==='door' && (p.type_izd === '1.5П' || p.type_izd === '1.5Пт'));
-  const doors2p = products.filter(p =>p.type ==='door' && (p.type_izd === '2П' || p.type_izd === '2Пт'));
-
-  //const glyhar = products.filter(p => p.type === 'glyhar' && p.type_izd === 'окно гл.');
-  //const vitrajDoors = products.filter(p => normalize(p.type_izd) === 'витраж к двери');
-
-  //TODO
-  //const loggias = products.filter(p => p.type === 'loggia');
-  //const mosquitoNets = products.filter(p => p.type === 'ms');
-
-  const coldStats = aggregate(coldWindows);
-  const hotStats = aggregate(hotWindows);
-  const allWindowStats = aggregate(allWindows);
-  const door1pStats = aggregate(doors1p);
-  const door15pStats = aggregate(doors15p);
-  const door2pStats = aggregate(doors2p);
-  const vitrajStats = aggregate(vitrajDoors);
-  //const glyharStats = aggregate(glyhar);
-  //TODO на будущее
-  //const loggiaStats = aggregate(loggias);
-  //const mosquitoStats = aggregate(mosquitoNets);
-
-  const total = [allWindowStats, door1pStats, door15pStats, door2pStats] //glyharStats vitrajStats
-      .reduce((acc, g) => ({
-        count: acc.count + g.count,
-        sqr: acc.sqr + g.sqr,
-        hours: acc.hours + g.hours,
-        money: acc.money + g.money
-      }), { count: 0, sqr: 0, hours: 0, money: 0 });
-
-  const totalRounded = {
-    count: parseFloat(total.count.toFixed(3)),
-    sqr: parseFloat(total.sqr.toFixed(3)),
-    hours: parseFloat(total.hours.toFixed(3)),
-    money: parseFloat(total.money.toFixed(3))
-  };
-
-  // === 5. Заголовок сводки ===
-  const summaryHeader = worksheet.addRow(['Сводная статистика']);
-  summaryHeader.getCell(1).font = { bold: true, size: 14 };
-  worksheet.addRow([]); // пустая строка
-
-  const summaryTableHeaders = ['', '', 'Кол-во', 'Площадь, м²', 'Н/час', 'Н/руб'];
-  const summaryHeaderRow = worksheet.addRow(summaryTableHeaders);
-  summaryHeaderRow.eachCell(cell => {
-    cell.font = { bold: true };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDDDDD' } };
-    cell.border = { style: 'thin' };
-  });
-
-  const addSummaryRow = (name, profile, data) => {
-    const row = worksheet.addRow([
-      name,
-      '',
-      data.count,
-      data.sqr,
-      data.hours,
-      data.money
-    ]);
-    row.eachCell(cell => {
-      cell.border = { style: 'thin' };
-      if (data.count === 0 && data.sqr === 0 && data.hours === 0 && data.money === 0) {
-        cell.font = { italic: true, color: { argb: 'FF888888' } };
-      }
-    });
-  };
-
-  addSummaryRow('Холодные окна', '', coldStats);
-  addSummaryRow('Теплые окна', '', hotStats);
-  addSummaryRow('Витраж к двери', '', vitrajStats);
-  addSummaryRow('Всего окон', '', allWindowStats);
-  addSummaryRow('Всего 1П дверей', '', door1pStats);
-  addSummaryRow('Всего 1.5П дверей', '', door15pStats);
-  addSummaryRow('Всего 2П дверей', '', door2pStats);
-  //if (glyharStats.count > 0) addSummaryRow('Глухие окна', '', glyharStats);
-  //addSummaryRow('Лоджии', '', loggiaStats);
-  //addSummaryRow('Москитные сетки', '', mosquitoStats);
-
-  worksheet.addRow([]);
-  const totalRow = worksheet.addRow(['', 'ИТОГО:', totalRounded.count, totalRounded.sqr, totalRounded.hours, totalRounded.money]);
-  totalRow.eachCell((cell, colNum) => {
-    if (colNum >= 3) {
-      cell.font = { bold: true };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCFFFF' } };
-    }
-  });
-
-  // === 6. ПУСТАЯ СТРОКА ПЕРЕД ДЕТАЛИЗАЦИЕЙ ===
-  worksheet.addRow([]);
-  worksheet.addRow([]);
-
-  // === ДЕТАЛЬНАЯ ГРУППИРОВКА ПО ПРОФИЛЯМ  ===
-
-  const expectedGroups = [
-    { type_izd: 'окно гл.', profile: 'ах' },
-    { type_izd: 'окно гл.', profile: 'ат' },
-    { type_izd: 'окно гл.', profile: 'ш' },
-    { type_izd: 'окно гл.', profile: 'сх' },
-    { type_izd: 'окно гл.', profile: 'ст' },
-    { type_izd: 'окно пов.-отк.', profile: 'ах' },
-    { type_izd: 'окно пов.-отк.', profile: 'ат' },
-    { type_izd: 'окно пов.-отк.', profile: 'ст' },
-    { type_izd: 'окно пов.-отк.', profile: 'сх' },
-    { type_izd: 'окно пов.-отк.', profile: 'ш' },
-    { type_izd: '1П', profile: 'ах'},
-    { type_izd: '1П', profile: 'сх'},
-    { type_izd: '1Пт', profile: 'ат' },
-    { type_izd: '1Пт', profile: 'ст' },
-    { type_izd: '1Пт', profile: 'ш' },
-    { type_izd: '1.5П', profile: 'ах' },
-    { type_izd: '1.5П', profile: 'сх' },
-    { type_izd: '1.5Пт', profile: 'ат' },
-    { type_izd: '1.5Пт', profile: 'ст' },
-    { type_izd: '1.5Пт', profile: 'ш' },
-    { type_izd: '2П', profile: 'ах' },
-    { type_izd: '2П', profile: 'сх' },
-    { type_izd: '2Пт', profile: 'ат' },
-    { type_izd: '2Пт', profile: 'ст' },
-    { type_izd: '2Пт', profile: 'ш' },
-  ];
-
-  // Заголовок детальной группировки
-  const detailHeader = worksheet.addRow(['Детализация по профилям']);
-  detailHeader.getCell(1).font = { bold: true, size: 14 };
-  worksheet.addRow([]); // пустая строка
-
-  // Заголовки таблицы детализации
-  const detailHeaders = [
-    'Наименование',
-    'Профиль',
-    'Кол-во',
-    'Площадь',
-    'н/час',
-    'н/руб',
-  ];
-  const detailHeaderRow = worksheet.addRow(detailHeaders);
-  detailHeaderRow.eachCell(cell => {
-    cell.font = { bold: true };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDDDDD' } };
-    cell.border = { style: 'thin' };
-  });
-
-  // Функция для суммирования по группе
-  const groupAggregates = {};
-
-  // Инициализируем все группы
-  expectedGroups.forEach(group => {
-    const key = `${group.type_izd}__${group.profile}`;
-    groupAggregates[key] = {
-      count: 0,
-      sqr: 0,
-      hours: 0,
-      money: 0,
-    };
-  });
-
-  // Агрегируем данные
-  products.forEach(p => {
-    const key = `${p.type_izd}__${p.profile}`;
-    if (!groupAggregates[key]) return; // пропускаем неизвестные комбинации
-
-    const agg = groupAggregates[key];
-    agg.count += parseInt(p.count) || 0;
-    agg.sqr += parseFloat(p.sqr) || 0;
-    agg.hours += parseFloat(p.total_time) || 0;
-    agg.money += parseFloat(p.norm_money) || 0;
-  });
-
-  // Добавляем строки
-  expectedGroups.forEach(group => {
-    const key = `${group.type_izd}__${group.profile}`;
-    const agg = groupAggregates[key] || {
-      count: 0,
-      sqr: 0,
-      hours: 0,
-      money: 0,
-    };
-
-    const row = worksheet.addRow([
-      group.type_izd,
-      group.profile,
-      agg.count,
-      parseFloat(agg.sqr.toFixed(3)),
-      parseFloat(agg.hours.toFixed(3)),
-      parseFloat(agg.money.toFixed(3)), // как в примере — 2 знака
-    ]);
-
-    row.eachCell(cell => {
-      cell.border = { style: 'thin' };
-      if (agg.count === 0 && agg.sqr === 0 && agg.hours === 0 && agg.money === 0) {
-        cell.font = { italic: true, color: { argb: 'FF888888' } };
-      }
-    });
-  });
-
-  // === Автоширина ===
-  worksheet.columns.forEach(column => {
-    let maxLength = 10;
-    column.eachCell({ includeEmpty: true }, cell => {
-      const length = cell.value ? String(cell.value).length : 10;
-      if (length > maxLength) maxLength = length;
-    });
-    column.width = Math.min(maxLength + 2, 30);
-  });
-
-  // === 9. Экспорт ===
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `peo-report-${exportYear}-${String(month.value).padStart(2, '0')}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
 };
 
 // ========== ЗАГРУЗКА ДАННЫХ ==========
@@ -745,7 +412,7 @@ const loadData = async () => {
     employees.value = res.data.employees;
     products.value = res.data.products;
 
-    //console.log("RESSS", res);
+    console.log("RESSS", res);
   } catch (error) {
     console.error('Ошибка загрузки данных:', error);
   }

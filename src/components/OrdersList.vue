@@ -101,6 +101,7 @@ async function fetchOrders() {
     //TODO Добавить поиск по номеру заказа
     const response = await axios.get('/api/orders', {params});
 
+    console.log("RESP", response);
     if (response.data.error) {
       errorMessage.value = response.data.error;
     } else {

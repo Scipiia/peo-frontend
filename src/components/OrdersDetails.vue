@@ -28,6 +28,7 @@
                 <p><strong>Количество:</strong> {{ item.count }}</p>
                 <p><strong>Цвет:</strong> {{ item.color }}</p>
                 <p><strong>Площадь:</strong> {{ item.sqr }}</p>
+                <p><strong>Заказчик:</strong> {{ item.customer }}</p>
               </div>
             </div>
           </div>
@@ -103,7 +104,9 @@ function goToForm(item) {
     sqr: item.sqr,
     image: item.image,
     position: item.position,
+    customer: item.customer
   };
+
 
   // Сохраняем в sessionStorage под ключом, например, по ID + позиции
   const storageKey = `orderDetail_${item.order_num}_${item.position}`;

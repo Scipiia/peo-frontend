@@ -20,9 +20,9 @@
         <select v-model="template.category">
           <option value="window">Окно</option>
           <option value="door">Дверь</option>
-<!--          <option value="vitrage">Витраж</option>-->
           <option value="glyhar">Гляхарь</option>
-<!--          <option value="loggia">Лоджия</option>-->
+          <option value="vitrage">Витраж</option>
+          <option value="loggia">Лоджия</option>
         </select>
       </div>
       <div>

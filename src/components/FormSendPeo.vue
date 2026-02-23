@@ -9,6 +9,7 @@
       <p><strong>Количество:</strong> {{ cardInfo.count }}</p>
       <p><strong>Цвет:</strong> {{ cardInfo.color }}</p>
       <p><strong>Площадь:</strong> {{ cardInfo.sqr }} м²</p>
+      <p><strong>Заказчик:</strong> {{ cardInfo.customer }}</p>
       <!-- Миниатюра -->
       <div v-if="cardInfo.image" class="image-preview-container">
         <img
@@ -276,7 +277,8 @@ const cardInfo = ref({
   color: 'Не указан',
   image: '',
   sqr: 0,
-  position: ''
+  position: '',
+  customer: ''
 });
 
 // --- Загрузка данных: сначала из sessionStorage, потом из query ---
@@ -343,9 +345,9 @@ const selectedName = ref('');
 const categoryLabels = {
   window: 'Окна',
   glyhar: 'Глухари',
+  door: 'Двери',
   loggia: 'Лоджии',
   vitrage: 'Витражи',
-  door: 'Двери',
 };
 
 // --- Список основных изделий в этом заказе ---
@@ -601,7 +603,7 @@ function saveNormirovka() {
     sqr: parseFloat(cardInfo.value.sqr),
   };
 
-  //console.log(payload);
+  console.log(payload);
 
   // Отправляем
   fetch('/api/orders/order-norm/template', {
