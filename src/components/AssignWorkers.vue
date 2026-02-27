@@ -170,7 +170,6 @@ onMounted(async () => {
     if (!assemblyRes.ok) throw new Error('Не удалось загрузить сборку');
     const data = await assemblyRes.json();
 
-    console.log("DASDSS", data);
 
     const processedItems = data.map(item => ({
       ...item,
@@ -252,17 +251,15 @@ const loadEmployeesForType = async (type) => {
   employeesLoading.value[type] = true;
 
 
-  console.log(`🔍 Загрузка сотрудников для типа: "${type}" (typeof: ${typeof type})`);
+  //console.log(`Загрузка сотрудников для типа: "${type}" (typeof: ${typeof type})`);
 
   try {
     // 👈 Ключевое изменение: передаём type в запрос
     const res = await fetch(`/api/workers/all?type=${type}`);
-    console.log(`🌐 Запрос: ${res}`);
+    //console.log(`🌐 Запрос: ${res}`);
 
     if (!res.ok) throw new Error('Не удалось загрузить сотрудников');
     employeesByType.value[type] = await res.json();
-
-    console.log("emploo", employeesByType.value)
   } catch (err) {
     console.error(`Ошибка загрузки сотрудников для ${type}:`, err);
     employeesByType.value[type] = []; // fallback
@@ -277,7 +274,6 @@ const getEmployeesForType = (type) => {
     loadEmployeesForType(type); // запускаем загрузку
   }
 
-  console.log("GETEMP", employeesByType.value);
   return employeesByType.value[type] || [];
 };
 

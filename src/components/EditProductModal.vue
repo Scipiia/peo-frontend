@@ -141,7 +141,6 @@ const initNormMoney = () => {
   const total = parseFloat(localProduct.value.total_time);
   const coef = parseFloat(localProduct.value.coefficient);
 
-  console.log("SASAS", total)
 
   if (!isNaN(total) && !isNaN(coef) && coef > 0) {
     localProduct.value.norm_money = parseFloat((total * coef).toFixed(3));

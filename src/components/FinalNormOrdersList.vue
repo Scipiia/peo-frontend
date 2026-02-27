@@ -34,7 +34,7 @@
       </div>
 
       <div class="actions">
-        <button @click="exportToExcel" class="btn-export">
+        <button @click="downloadExcel" class="btn-export">
           Экспорт в Excel
         </button>
       </div>
@@ -76,9 +76,9 @@
 
           <!-- Динамические колонки -->
           <th
-              v-for="col in dynamicColumns"
-              :key="col.key"
-              :style="{ minWidth: col.width, textAlign: col.align || 'left' }"
+              v-for="(col, index) in dynamicColumns"
+              :key="`${col.key}_${index}`"
+              :style="{ width: col.width, textAlign: col.align || 'left' }"
               class="dynamic-col"
           >
             {{ col.label }}
@@ -109,7 +109,10 @@
                 v-for="col in dynamicColumns"
                 :key="col.key"
                 :style="{ textAlign: col.align || 'left' }"
-                :class="{ 'cell-empty': getValueByColumn(prod, col.key) === '—' }"
+                :class="[
+                      col.class,
+                      { 'cell-empty': getValueByColumn(prod, col.key) === '—' }
+                        ]"
             >
               {{ getValueByColumn(prod, col.key) }}
             </td>
@@ -200,12 +203,8 @@ const typeGroups = {
     types: ['window', 'door', 'glyhar']
   },
   loggia: {
-    label: 'Лоджии',
-    types: ['loggia']
-  },
-  vitrage: {
-    label: 'Витраж',
-    types: ['vitrage']
+    label: 'Лоджии и витражи',
+    types: ['loggia', 'vitrage']
   },
   mosquito_net: {
     label: 'Москитные сетки',
@@ -247,7 +246,7 @@ const dynamicColumns = computed(() => {
         {key: 'count', label: 'количество', width: '90px', align: 'center'},
         {key: 'sqr', label: 'площадь', width: '90px', align: 'center'},
         {key: 'sqr_stv', label: 'площадь створки', width: '90px', align: 'center'},
-
+        {key: 'total_time', label: 'н/час', width: '90px', align: 'center', class: 'col-total'},
     )
   }
 
@@ -258,13 +257,15 @@ const dynamicColumns = computed(() => {
         {key: 'type_izd', label: 'наименование', width: '90px', align: 'center'},
         {key: 'profile', label: 'профиль', width: '90px', align: 'center'},
         {key: 'count', label: 'количество', width: '90px', align: 'center'},
+        {key: 'sqr', label: 'площадь', width: '90px', align: 'center'},
+        {key: 'total_time', label: 'н/час', width: '90px', align: 'center', class: 'col-total'},
     )
   }
 
 
   columns.push(
-      { key: 'norm_money', label: 'Н/руб', width: '80px', align: 'center' },
       { key: 'brigade', label: 'изготовитель', width: '80px', align: 'center' },
+      { key: 'norm_money', label: 'Н/руб', width: '80px', align: 'center', class: 'col-money' },
   );
 
   return columns;
@@ -294,7 +295,7 @@ const getValueByColumn = (product, columnKey) => {
     if (columnKey === 'count') {
       return parseInt(value);
     }
-    // Для коэффициента — 2 знака
+    // Для коэффициента — 3 знака
     if (columnKey === 'coefficient') {
       return parseFloat(value.toFixed(3));
     }
@@ -412,9 +413,55 @@ const loadData = async () => {
     employees.value = res.data.employees;
     products.value = res.data.products;
 
-    console.log("RESSS", res);
+    //console.log(products.value);
+
   } catch (error) {
     console.error('Ошибка загрузки данных:', error);
+  }
+};
+
+const loading = ref(false);
+
+const downloadExcel = async () => {
+  loading.value = true;
+  try {
+    const params = new URLSearchParams();
+
+    // Отправляем каждый активный тип как ?type=...
+    activeBackendTypes.value.forEach(type => {
+      params.append('type', type);
+    });
+
+    // Диапазон дат по месяцу
+    params.append('from', filterFrom.value);
+    params.append('to', filterTo.value);
+    params.append('order_num', orderNum.value);
+
+
+    const response = await axios.get('/api/report/excel', {
+      params: params, // передаем from, to, order_num и т.д.
+      responseType: 'blob', // КРИТИЧНО: говорим axios ждать бинарные данные
+    });
+
+    // Создаем ссылку в памяти браузера
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+
+    // Имя файла (можно достать из заголовка или задать самому)
+    link.setAttribute('download', `report_${new Date().toLocaleDateString()}.xlsx`);
+
+    document.body.appendChild(link);
+    link.click();
+
+    // Чистим за собой
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Ошибка при загрузке Excel:', error);
+    alert('Не удалось скачать файл');
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -560,20 +607,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-td:nth-child(16),
-th:nth-child(16) {
-  background-color: #ebf8ff !important;
-  font-weight: bold;
-  color: #2c5282;
-}
-
-td:nth-child(14),
-th:nth-child(14) {
-  background-color: #ebf8ff !important;
-  font-weight: bold;
-  color: royalblue;
-}
-
 .employee-col {
   min-width: 60px;
 }
@@ -608,13 +641,16 @@ th:nth-child(14) {
   transform: translateY(0);
 }
 
-.summary-stats {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-  font-size: 14px;
+.col-total {
+  font-weight: 700;
+  color: #000;
+  background-color: #f6f0ff !important;
+}
+
+.col-money {
+  font-weight: 700;
+  color: #000;
+  background-color: #fff9db !important;
 }
 
 .summary-stats h4 {
@@ -624,15 +660,6 @@ th:nth-child(14) {
   font-weight: 600;
 }
 
-.summary-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  background: white;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
 
 .summary-table th,
 .summary-table td {
@@ -701,6 +728,4 @@ th:nth-child(14) {
 
 .status-badge.status-final { background: #28a745;  }
 .status-badge.status-assigned{ background: #fd7e14; }
-
-
 </style>

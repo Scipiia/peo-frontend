@@ -329,8 +329,6 @@ const saveAll = async () => {
   loading.value = false;
 };
 
-//console.log("FFFFFF", assembly);
-console.log(route.query, route.params)
 
 const goToPrint = () => {
   const id = route.params.id;

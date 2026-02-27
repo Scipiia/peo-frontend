@@ -13,22 +13,49 @@
             <thead>
             <tr>
               <th width="40%">Операция</th>
-              <th width="10%">Итого <br> н/час</th>
-              <th width="10%">Итого <br> н/мин</th>
-              <th>ФИО исполнителя</th>
+              <th width="5%">Итого <br> н/час</th>
+              <th width="5%">Итого <br> н/мин</th>
+              <th width="40%">ФИО исполнителя</th>
+              <th width="10%"></th>
             </tr>
             </thead>
+<!--            <tbody>-->
+<!--            <tr v-for="op in assembly.main.operations" :key="op.operation_name">-->
+<!--              <td>{{ op.operation_label }}</td>-->
+<!--              <td>{{ op.value.toFixed(3) }}</td>-->
+<!--              <td>{{ op.minutes }}</td>-->
+<!--              <td></td>-->
+<!--            </tr>-->
+<!--            <tr class="total-row">-->
+<!--              <td colspan="1" class="text-right"><strong>Итого:</strong></td>-->
+<!--              <td>{{ assembly.main.total_time.toFixed(3) }}</td>-->
+<!--              <td>{{ Math.round(assembly.main.total_time * 60) }}</td>-->
+<!--            </tr>-->
             <tbody>
-            <tr v-for="op in assembly.main.operations" :key="op.operation_name">
-              <td>{{ op.operation_label }}</td>
-              <td>{{ op.value.toFixed(3) }}</td>
-              <td>{{ op.minutes }}</td>
-              <td></td>
-            </tr>
-            <tr class="total-row">
-              <td colspan="1" class="text-right"><strong>Итого:</strong></td>
+            <template v-for="group in getGroupedOps(assembly.main.operations)" :key="group.title">
+
+              <tr v-for="(op, index) in group.items" :key="op.operation_name">
+                <td>{{ op.operation_label }}</td>
+                <td>{{ op.value.toFixed(3) }}</td>
+                <td>{{ op.minutes }}</td>
+                <td></td>
+                <!--                <td>{{ group.totalValue.toFixed(3) }}</td>-->
+                <td v-if="index === 0"
+                    :rowspan="group.items.length"
+                    style="vertical-align: middle; text-align: center; font-weight: bold; background: #fff; border-left: 2px solid #000; border-bottom: 2px solid #000"
+                >
+                  {{ group.totalValue.toFixed(3) }}
+                  <small>({{ group.totalMinutes.toFixed(1) }} мин)</small>
+                </td>
+              </tr>
+            </template>
+
+            <!-- Общий итог (остается в самом конце) -->
+            <tr class="total-row" style="background-color: #eee; font-weight: bold; font-size: 1.1em;">
+              <td class="text-right"></td>
               <td>{{ assembly.main.total_time.toFixed(3) }}</td>
               <td>{{ Math.round(assembly.main.total_time * 60) }}</td>
+              <td></td>
             </tr>
             </tbody>
           </table>
@@ -53,22 +80,37 @@
           <thead>
           <tr>
             <th width="40%">Операция</th>
-            <th width="10%">Итого <br> н/час</th>
-            <th width="10%">Итого <br> н/мин</th>
-            <th>ФИО исполнителя</th>
+            <th width="5%">Итого <br> н/час</th>
+            <th width="5%">Итого <br> н/мин</th>
+            <th width="40%">ФИО исполнителя</th>
+            <th width="10%"></th>
           </tr>
           </thead>
           <tbody>
-          <tr v-for="op in sub.operations" :key="op.operation_name">
-            <td>{{ op.operation_label }}</td>
-            <td>{{ op.value.toFixed(3) }}</td>
-            <td>{{ op.minutes }}</td>
+          <template v-for="group in getGroupedOps(sub.operations)" :key="group.title">
+
+            <tr v-for="(op, index) in group.items" :key="op.operation_name">
+              <td>{{ op.operation_label }}</td>
+              <td>{{ op.value.toFixed(3) }}</td>
+              <td>{{ op.minutes }}</td>
+              <td></td>
+              <!--                <td>{{ group.totalValue.toFixed(3) }}</td>-->
+              <td v-if="index === 0"
+                  :rowspan="group.items.length"
+                  style="vertical-align: middle; text-align: center; font-weight: bold; background: #fff; border-left: 2px solid #000; border-bottom: 2px solid #000"
+              >
+                {{ group.totalValue.toFixed(3) }}
+                <small>({{ group.totalMinutes.toFixed(1) }} мин)</small>
+              </td>
+            </tr>
+          </template>
+
+          <!-- Общий итог (остается в самом конце) -->
+          <tr class="total-row" style="background-color: #eee; font-weight: bold; font-size: 1.1em;">
+            <td class="text-right"></td>
+            <td>{{ assembly.main.total_time.toFixed(3) }}</td>
+            <td>{{ Math.round(assembly.main.total_time * 60) }}</td>
             <td></td>
-          </tr>
-          <tr class="total-row">
-            <td colspan="1" class="text-right"><strong>Итого:</strong></td>
-            <td>{{ sub.total_time.toFixed(3) }}</td>
-            <td>{{ Math.round(sub.total_time * 60) }}</td>
           </tr>
           </tbody>
         </table>
@@ -349,6 +391,76 @@ function print() {
     if (!printWindow.closed) printWindow.close();
   }
 }
+
+// TODO новый столбец
+
+// Определяем правила группировки (один раз для всех шаблонов)
+const OP_GROUPS_CONFIG = [
+  {
+    title: "Напиловка",
+    names: ["nastr_for_napil", "napil_bez_impost", "nastr_pbx", "pzr", "rabota_pbx", "podg_obor", "napil_ram_stv", "napil_don_soed", "napil_shtylp", "impost_napil", "nastr_pbx_vo",
+    "meh_obr_pzr", "rab_pbx_vo2", "frez_yst_shtylp_win", "obr_stv", "napil_donn", "napil_shtylp", "yst_adapt24", "napil_adapt24", "obr_ram_vo2", "napil_ugol", "napil", "nastr_obr_napil",
+    "napil_kontyr", "napil_krishek", "napil_stoik_do3m", "napil_ygol_30x30", "napil_rigel_do1m", "napil_rigel_bol1m", "napil_stoik_bol3m"]
+  },
+  {
+    title: "Фрезеровка",
+    names: ["frezer_nastr", "frezer_porog_sverl_promej_sbor", "opres_nastr", "opres", "frezer_porog_promej_sbor", "frez_yst_shtylp_door", "frezer_porog_ram_porog_shping_promej_sb", "sles_obr_yst_furn",
+    "promej_sb_stv", "promej_sb_ram", "imp_frezer", "impost_sverlo", "impost_yst", "impost_frezer", "razm_sverl_otv", "promej_sb", "imp_sbor", "shtift", "yst_yplotn", "promej_sb2", "promej_sb_2ygl",
+    "promej_sb_2ygl_nest", "frezer_std_prof", "yst_zamkov", "promej_sb_3ygl_nest", "frezer2st_5nastr", "opres_4ygl", "sverl_rigel_zamok_2stor_frezer"]
+  },
+  {
+    title: "Установка",
+    names: ["yst_porog_ypl_derj_shetk_shtift", "podg_derj_shetki", "yst_porog_ypl_derj_shetk_ydal_germ_yst_zaglysh", "yst_porog_ypl_derj_shetk", "yst_ypl", "yst_ypl_ugl_shtift",  "yst_zpl_podg_shtapik"]
+  },
+  {
+    title: "Обработка и сборка замки",
+    names: ["sbor_petli", "yst_dver_mnogozap_zamok_nakl_cilindr_stubl_yst_otv_plan23", "yst_dvr_zamok_nakl_cild_antipan", "navesh_stv_yst_otv_plan1_reg_petli", "navesh_stv_yst_otvplan_petl_rdrh",
+    "yst_dver_zamok_nakl_cilindr", "navesh_stv_yst_otv_plan", "yst_dver_zamok_nakl_cilindr_stubl", "navesh_stv_yst_otv_plank_reg_petli", "napil_tag_stv", "obr_tag_stv", "podg_furn",
+    "yst_furn_stv", "navesh_ram_stv", "sbor_rychek", "rybka_tag", "podg_tag_yst_stv"]
+  },
+  {
+    title: "Уплотнители",
+    names: ["yst_zapoln", "ypl_falc", "yst_ypl_falc", "zashivka_stv"]
+  }
+];
+
+// Функция, которая группирует операции
+const getGroupedOps = (ops) => {
+  if (!ops) return [];
+  const usedNames = new Set();
+  const result = [];
+
+  // Сначала распределяем по заданным группам
+  OP_GROUPS_CONFIG.forEach(config => {
+    const groupItems = ops.filter(op => config.names.includes(op.operation_name));
+    if (groupItems.length > 0) {
+      result.push({
+        title: config.title,
+        items: groupItems,
+        totalValue: groupItems.reduce((s, i) => s + (i.value || 0), 0),
+        totalMinutes: groupItems.reduce((s, i) => s + (i.minutes || 0), 0)
+      });
+      config.names.forEach(name => usedNames.add(name));
+    }
+  });
+
+  // Всё остальное (чтобы не потерять новые операции)
+  const otherItems = ops.filter(op => !usedNames.has(op.operation_name));
+  if (otherItems.length > 0) {
+    result.push({
+      title: "Прочие операции",
+      items: otherItems,
+      totalValue: otherItems.reduce((s, i) => s + (i.value || 0), 0),
+      totalMinutes: otherItems.reduce((s, i) => s + (i.minutes || 0), 0)
+    });
+  }
+  return result;
+};
+
+
+// TODO
+
+
 </script>
 
 <style>

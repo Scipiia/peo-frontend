@@ -603,7 +603,7 @@ function saveNormirovka() {
     sqr: parseFloat(cardInfo.value.sqr),
   };
 
-  console.log(payload);
+  //console.log(payload);
 
   // Отправляем
   fetch('/api/orders/order-norm/template', {
