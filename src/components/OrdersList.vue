@@ -130,7 +130,7 @@ function viewOrderDetails(order) {
 <style scoped>
 .orders-page {
   padding: 20px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: Arial, sans-serif;
 }
 
 h1 {

@@ -54,7 +54,7 @@
             <tr class="total-row" style="background-color: #eee; font-weight: bold; font-size: 1.1em;">
               <td class="text-right"></td>
               <td>{{ assembly.main.total_time.toFixed(3) }}</td>
-              <td>{{ Math.round(assembly.main.total_time * 60) }}</td>
+              <td>{{ (assembly.main.total_time * 60).toFixed(1) }}</td>
               <td></td>
             </tr>
             </tbody>
@@ -108,8 +108,8 @@
           <!-- Общий итог (остается в самом конце) -->
           <tr class="total-row" style="background-color: #eee; font-weight: bold; font-size: 1.1em;">
             <td class="text-right"></td>
-            <td>{{ assembly.main.total_time.toFixed(3) }}</td>
-            <td>{{ Math.round(assembly.main.total_time * 60) }}</td>
+            <td>{{ sub.total_time.toFixed(3) }}</td>
+            <td>{{ (sub.total_time * 60).toFixed(1) }}</td>
             <td></td>
           </tr>
           </tbody>
@@ -300,7 +300,7 @@ function print() {
         <title>Технологический процесс</title>
         <style>
           body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 13px;
             line-height: 1.4;
             padding: 15px;
@@ -465,7 +465,7 @@ const getGroupedOps = (ops) => {
 
 <style>
 .print-container {
-  font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+  font-family: Arial, sans-serif;
   max-width: 900px;
   margin: 10px auto;
   padding: 10px;

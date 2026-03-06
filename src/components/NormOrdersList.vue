@@ -198,8 +198,8 @@ onMounted(() => {
 
 <style scoped>
 .orders-page {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-  max-width: 1200px;
+  font-family: Arial, sans-serif;
+  /*max-width: 1200px;*/
   margin: 0 auto;
   padding: 20px;
 }

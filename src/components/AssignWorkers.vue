@@ -443,7 +443,7 @@ const goBack = () => {
   max-width: 1000px;
   margin: 20px auto;
   padding: 20px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: Arial, sans-serif;
 }
 
 .info-grid {

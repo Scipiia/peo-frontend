@@ -385,6 +385,11 @@ const groupedTemplates = computed(() => {
     }
   });
 
+  Object.keys(groups).forEach(key => {
+    groups[key].sort((a, b) =>
+        a.code.localeCompare(b.code, undefined, {numeric: true, sensitivity: 'base'}));
+  });
+
   // Удаляем пустые группы
   Object.keys(groups).forEach(key => {
     if (groups[key].length === 0) delete groups[key];
@@ -801,8 +806,8 @@ const customOperationsToSend = computed(() => {
 
 <style scoped>
 .form-container {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  max-width: 900px;
+  font-family: Arial, sans-serif;
+  /*max-width: 1900px;*/
   margin: 0 auto;
   padding: 20px;
   background: #fff;

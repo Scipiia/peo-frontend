@@ -132,7 +132,7 @@ function goToForm(item) {
 <style scoped>
 /* Общие стили */
 div {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: Arial, sans-serif;
 }
 
 h2 {

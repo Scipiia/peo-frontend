@@ -16,9 +16,9 @@
         <select v-model="template.category">
           <option value="window">Окно</option>
           <option value="door">Дверь</option>
-<!--          <option value="vitrage">Витраж</option>-->
-          <option value="glyhar">Гляхарь</option>
-<!--          <option value="loggia">Лоджия</option>-->
+          <option value="glyhar">Глухарь</option>
+          <option value="vitrage">Витраж</option>
+          <option value="loggia">Лоджия</option>
         </select>
       </div>
       <div>
@@ -82,6 +82,8 @@ import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
+const loading = ref(false)
+
 const template = ref({
   code: '',
   name: '',
@@ -94,7 +96,6 @@ const template = ref({
   rules: null, // пока не трогаем
   head_name: '',
 })
-const loading = ref(false)
 
 // Загрузка шаблона по ID
 async function loadTemplate(code) {
@@ -103,6 +104,8 @@ async function loadTemplate(code) {
     const res = await fetch(`/api/admin/template?code=${code}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     template.value = await res.json()
+
+    console.log(template.value);
 
   } catch (err) {
     console.error('Ошибка загрузки шаблона:', err)
@@ -170,7 +173,7 @@ onMounted(() => {
 <style scoped>
 .template-edit {
   padding: 20px;
-  max-width: 900px;
+  /*max-width: 900px;*/
   margin: 0 auto;
 }
 input, select {
