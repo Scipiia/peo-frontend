@@ -7,6 +7,10 @@
         <label>Название для шаблона:</label>
         <input v-model="template.name" required />
       </div>
+      <div>
+        <label>Код шаблона</label>
+        <input v-model="template.code" required>
+      </div>
       <div class="form-checkbox">
         <label for="is_active">Использовать шаблон</label>
         <input type="checkbox" id="is_active" v-model="template.is_active" />
@@ -98,10 +102,10 @@ const template = ref({
 })
 
 // Загрузка шаблона по ID
-async function loadTemplate(code) {
+async function loadTemplate(id) {
   loading.value = true
   try {
-    const res = await fetch(`/api/admin/template?code=${code}`)
+    const res = await fetch(`/api/admin/template?id=${id}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     template.value = await res.json()
 
@@ -124,8 +128,8 @@ function addOperation() {
     value: 0.0,
     minutes: 0,
     group: '',
-    type: 'number',     // ← добавь по умолчанию
-    required: true      // ← или false, как чаще используется
+    type: 'number',
+    required: true
   })
 }
 
@@ -141,9 +145,10 @@ async function saveTemplate() {
       // rules оставляем как есть (или null)
     }
 
-    //console.log("PAYYY", payload);
+    // console.log("PAYYY", payload);
+    // console.log("PAYYY", route.params.id);
 
-    const res = await fetch(`/api/admin/template/update/${route.params.code}`, {
+    const res = await fetch(`/api/admin/template/update/${route.params.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -160,11 +165,11 @@ async function saveTemplate() {
 }
 
 onMounted(() => {
-  const code = route.params.code
-  if (code) {
-    loadTemplate(code)
+  const id = route.params.id
+  console.log(id);
+  if (id) {
+    loadTemplate(id)
   } else {
-    // Если ID нет — это создание (сделаем позже)
     addOperation() // добавим одну пустую операцию
   }
 })
@@ -202,7 +207,7 @@ input, select {
 .form-checkbox {
   display: flex;
   align-items: center;
-  gap: 8px; /* отступ между чекбоксом и текстом */
+  gap: 8px;
   margin: 8px 0;
 }
 

@@ -94,8 +94,8 @@ const template = ref({
   type_izd: '',
   profile: '',
   is_active: 1,
-  operations: [], // ← будет массив объектов
-  rules: null, // пока не трогаем
+  operations: [],
+  rules: null,
   head_name: '',
 })
 const loading = ref(false)
@@ -109,8 +109,8 @@ function addOperation() {
     value: 0.0,
     minutes: 0,
     group: '',
-    type: 'number',     // ← добавь по умолчанию
-    required: false      // ← или false, как чаще используется
+    type: 'number',
+    required: false
   })
 }
 

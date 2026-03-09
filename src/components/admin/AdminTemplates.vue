@@ -9,6 +9,7 @@
     <table class="templates-table" v-if="templates.Template && templates.Template.length">
       <thead>
       <tr>
+        <th>ID</th>
         <th>Код</th>
         <th>Категория</th>
         <th>Название</th>
@@ -17,11 +18,12 @@
       </thead>
       <tbody>
       <tr v-for="template in templates.Template" :key="template.id">
+        <td>{{ template.ID }}</td>
         <td>{{ template.code }}</td>
         <td>{{ template.category }}</td>
         <td>{{ template.name }}</td>
         <td>
-          <router-link :to="`/admin/templates/edit/${template.code}`">Редактировать</router-link>
+          <router-link :to="`/admin/templates/edit/${template.ID}`">Редактировать</router-link>
         </td>
       </tr>
       </tbody>

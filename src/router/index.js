@@ -36,7 +36,7 @@ const routes = [
             { path: 'peo', component: AdminEditDataPeo },
         ]
     },
-    {path: "/admin/templates/edit/:code", name: "AdminTemplateEdit", component: AdminTemplateEdit},
+    {path: "/admin/templates/edit/:id", name: "AdminTemplateEdit", component: AdminTemplateEdit},
     {path: "/admin/templates/new", name: "AdminTemplateCreate", component: AdminTemplateCreate}
 ];
 
