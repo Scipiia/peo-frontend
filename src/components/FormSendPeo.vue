@@ -213,6 +213,19 @@
         </button>
       </div>
 
+      <!-- Кнопка расчёта и опции -->
+      <div class="checkbox-loggia">
+        <!-- ← Чекбокс ТОЛЬКО для лоджий -->
+        <label v-if="fullForm?.type === 'Лоджия' || fullForm?.type === 'loggia'" class="checkbox-loggia-text">
+          <input
+              type="checkbox"
+              v-model="includeDopMaterials"
+              class="checkbox-loggia-input"
+          >
+          <span class="">Учесть доп. материалы (соединители)</span>
+        </label>
+      </div>
+
       <!-- Итоговое время -->
       <div class="total-summary">
         <strong>Итоговое время:</strong>
@@ -680,6 +693,19 @@ function saveNormirovka() {
 
 //TODO новая логика для расчета норм по материалам
 const calculationContext = ref(null);
+const includeDopMaterials = ref(false);
+
+// Сбрасываем флаг при смене типа изделия, чтобы не «утек» на другие типы
+watch(() => fullForm.value?.type, (newType) => {
+  if (newType !== 'Лоджия' && newType !== 'loggia') {
+    includeDopMaterials.value = false;
+  }
+}, { immediate: true });
+
+// Сброс флага при смене позиции (опционально, но рекомендуется)
+watch(() => cardInfo.value?.position, () => {
+  includeDopMaterials.value = false;
+});
 
 async function recalculateNorms() {
   if (!fullForm.value || !cardInfo.value.order_num || !cardInfo.value.position) {
@@ -702,11 +728,12 @@ async function recalculateNorms() {
         position: parseInt(cardInfo.value.position),
         type: categoryName,
         template: fullForm.value.code,
-        count: parseInt(cardInfo.value.count)
+        count: parseInt(cardInfo.value.count),
+        permis_dop_material: includeDopMaterials.value
       })
     });
 
-    //console.log("RESP", response);
+    console.log("RESP", response);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1145,6 +1172,21 @@ h2 {
   font-weight: 600;
   color: #155724;
   font-size: 16px;
+}
+
+.checkbox-loggia {
+  margin: 16px 0;
+  padding: 10px 16px;
+  background-color: #e9f7ef;
+  border-left: 4px solid #28a745;
+  border-radius: 4px;
+  font-weight: 600;
+  color: #155724;
+  font-size: 16px;
+}
+
+.checkbox-loggia-input {
+  margin-right: 10px;
 }
 
 </style>
