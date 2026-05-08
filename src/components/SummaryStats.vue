@@ -153,7 +153,12 @@ const expectedGroups = [
   { type_izd: '2П', profile: 'сх' },
   { type_izd: '2Пт', profile: 'ат' },
   { type_izd: '2Пт', profile: 'ст' },
-  { type_izd: '2Пт', profile: 'ш' }
+  { type_izd: '2Пт', profile: 'ш' },
+  { type_izd: 'витраж к двери', profile: 'сх' },
+  { type_izd: 'витраж к двери', profile: 'ст' },
+  { type_izd: 'витраж к двери', profile: 'ах' },
+  { type_izd: 'витраж к двери', profile: 'ат' },
+  { type_izd: 'витраж к двери', profile: 'ш' },
 ];
 
 function getFixedGroupingWithUnmatched(products) {

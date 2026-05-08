@@ -29,12 +29,21 @@ const doorTypeOptions = [
   '2Пт'
 ];
 
+const loggiaTypeOptions = [
+  'створка',
+  '2ств.лр',
+  '3ств.лр',
+  '4ств.лр',
+  '5ств.лр',
+  '6ств.лр'
+];
+
 const profileType = [
   {value: 'сх', label: 'Сиал холодный'},
   {value: 'ст', label: 'Сиал теплый'},
   {value: 'ах', label: 'Алютех холодный'},
   {value: 'ат', label: 'Алютех теплый'},
-  {value: 'щ', label: 'Шуко'},
+  {value: 'ш', label: 'Шуко'},
 ]
 
 const systemaType = [
@@ -46,35 +55,49 @@ const isDoor = computed(() => {
   return localProduct.value.type === 'door';
 });
 
-// список бригад
-const brigadeTypeOptions = ['бригада', 'бригада окон, дверей', 'бригада витражей'];
+const isLoggia = computed(() => {
+  return localProduct.value.type === 'loggia';
+})
 
+// список бригад
+const brigadeTypeOptions = ['бригада', 'бригада окон, дверей', 'бригада лоджий'];
+
+// === Валидация ===
 // === Валидация ===
 const errors = ref({});
 
-// Проверка обязательных полей (кроме parent_assembly)
 const validate = () => {
   errors.value = {};
 
-  const requiredFields = [
+  // Базовые обязательные поля для всех типов
+  const baseFields = [
     { key: 'type_izd', label: 'Наименование' },
-    { key: 'systema', label: 'Система' },
-    { key: 'profile', label: 'Профиль' },
     { key: 'sqr', label: 'Площадь' },
     { key: 'brigade', label: 'Бригада' },
     { key: 'norm_money', label: 'Н/руб' },
     { key: 'customer_type', label: 'Направление заказчика' },
-    { key: 'coefficient', label: 'Коэффициент'}
+    { key: 'coefficient', label: 'Коэффициент' }
   ];
 
-  requiredFields.forEach(field => {
+  // Поля, которые нужны только для НЕ-лоджий
+  const conditionalFields = !isLoggia.value
+      ? [
+        { key: 'systema', label: 'Система' },
+        { key: 'profile', label: 'Профиль' }
+      ]
+      : [];
+
+  const allRequired = [...baseFields, ...conditionalFields];
+
+  // Проверка на пустые строки
+  allRequired.forEach(field => {
     const value = localProduct.value[field.key];
     if (!value || (typeof value === 'string' && !value.trim())) {
       errors.value[field.key] = true;
     }
   });
 
-  // Проверка числовых полей на корректность
+  // Проверка числовых полей
   if (isNaN(parseFloat(localProduct.value.sqr)) || parseFloat(localProduct.value.sqr) < 0) {
     errors.value.sqr = true;
   }
@@ -184,8 +207,21 @@ const cancel = () => {
             @change="validate"
         >
           <option value="" disabled>Выберите тип двери</option>
-          <option v-for="opt in doorTypeOptions" :key="opt" :value="opt">
-            {{ opt }}
+          <option v-for="optDoor in doorTypeOptions" :key="optDoor" :value="optDoor">
+            {{ optDoor }}
+          </option>
+        </select>
+
+        <select
+          v-else-if="isLoggia"
+          v-model="localProduct.type_izd"
+          class="form-select"
+          :class="{ 'invalid': errors.type_izd }"
+          @change="validate"
+        >
+          <option value="" disabled>Выберите тип лоджии</option>
+          <option v-for="optLoggia in loggiaTypeOptions" :key="optLoggia" :value="optLoggia">
+            {{ optLoggia }}
           </option>
         </select>
 
@@ -223,7 +259,7 @@ const cancel = () => {
       </div>
 
       <!-- Система -->
-      <div class="form-group" :class="{ 'error': errors.systema }">
+      <div v-if="!isLoggia" class="form-group" :class="{ 'error': errors.systema }">
         <label>Система</label>
         <select
             v-model="localProduct.systema"
@@ -244,7 +280,7 @@ const cancel = () => {
       </div>
 
       <!-- Профиль -->
-      <div class="form-group" :class="{ 'error': errors.profile }">
+      <div v-if="!isLoggia" class="form-group" :class="{ 'error': errors.profile }">
         <label>Профиль</label>
         <select
           v-model="localProduct.profile"
@@ -346,18 +382,44 @@ const cancel = () => {
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: center;      /* Центрирование по вертикали */
   justify-content: center;
   z-index: 1000;
+  padding: 10px;            /* Отступ от краев экрана для мобильных */
+  box-sizing: border-box;
 }
 
 .modal-content {
   background: white;
-  padding: 40px;
+  padding: 24px;            /* Чуть уменьшил с 40px для экономии места */
   border-radius: 8px;
   width: 400px;
   max-width: 90vw;
+
+  /* === ГЛАВНЫЕ ИСПРАВЛЕНИЯ === */
+  max-height: 90vh;         /* Ограничиваем высоту 90% от экрана */
+  overflow-y: auto;         /* Включаем вертикальную прокрутку внутри модалки */
+  display: flex;
+  flex-direction: column;   /* Чтобы кнопки можно было прижать к низу */
+  /* ========================= */
+
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
 }
 
 .form-group {

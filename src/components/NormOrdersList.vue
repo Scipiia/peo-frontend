@@ -23,6 +23,7 @@
           <option value="door">Двери</option>
           <option value="loggia">Лоджии</option>
           <option value="vitrage">Витражи</option>
+          <option value="mosquito">Москитные сетки</option>
         </select>
       </div>
     </div>
@@ -33,6 +34,7 @@
       <tr>
         <th>Заказ</th>
         <th>Изделие</th>
+        <th>Поз</th>
         <th>Кол-во</th>
         <th>Тип</th>
         <th>Время (ч)</th>
@@ -45,6 +47,7 @@
       <tr v-for="order in orders" :key="order.id">
         <td>{{ order.order_num }}</td>
         <td>{{ order.name }}</td>
+        <td>{{ order.position }}</td>
         <td class="text-center">{{ order.count }}</td>
         <td>
           <span :class="`type-badge type-${order.type}`">{{ getTypeLabel(order.type) }}</span>
@@ -105,6 +108,7 @@ const typeLabels = {
   door: 'Дверь',
   loggia: 'Лоджия',
   vitrage: 'Витраж',
+  mosquito: "Москитка",
   other: 'Другое'
 };
 
@@ -150,6 +154,8 @@ const fetchOrders = async () => {
     // data — массив. Если null → []
     orders.value = Array.isArray(data) ? data : [];
 
+    console.log(orders.value);
+
   } catch (err) {
     console.error('Ошибка сети:', err);
     orders.value = [];
@@ -169,7 +175,11 @@ const goToNormirovka = (order) => {
 };
 
 const goToWorkers = (order) => {
-  router.push({ name: 'AssignWorkers', params: { id: order.id } });
+  router.push({
+    name: 'AssignWorkers',
+    params: { id: order.id },
+    query: {source: order.type}
+  });
 };
 
 const cancelOrder = async (order) => {
@@ -278,6 +288,7 @@ h2 {
 .type-badge.type-door   { background: #dc3545; }
 .type-badge.type-loggia { background: #fd7e14; }
 .type-badge.type-vitrage{ background: #6f42c1; }
+.type-badge.type-mosquito{ background: #6f7849; }
 
 .btn-view {
   padding: 6px 12px;

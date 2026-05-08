@@ -3,21 +3,31 @@
     <!-- Фильтры по типу -->
     <div class="filters">
       <!-- Год -->
+<!--      <div class="filter-group">-->
+<!--        <label for="year-select">Год</label>-->
+<!--        <select id="year-select" v-model="year" @change="loadData" class="filter-select">-->
+<!--          <option v-for="y in [2023, 2024, 2025, 2026, 2027]" :key="y">{{ y }}</option>-->
+<!--        </select>-->
+<!--      </div>-->
+
+<!--      &lt;!&ndash; Месяц &ndash;&gt;-->
+<!--      <div class="filter-group">-->
+<!--        <label for="month-select">Месяц</label>-->
+<!--        <select id="month-select" v-model="month" @change="loadData" class="filter-select">-->
+<!--          <option v-for="(name, index) in months" :key="index + 1" :value="index + 1">-->
+<!--            {{ name }}-->
+<!--          </option>-->
+<!--        </select>-->
+<!--      </div>-->
+
       <div class="filter-group">
-        <label for="year-select">Год</label>
-        <select id="year-select" v-model="year" @change="loadData" class="filter-select">
-          <option v-for="y in [2023, 2024, 2025, 2026, 2027]" :key="y">{{ y }}</option>
-        </select>
+        <label for="month-select">С даты</label>
+        <input type="date" v-model="fromDate" @change="loadData" class="filter-select" />
       </div>
 
-      <!-- Месяц -->
       <div class="filter-group">
-        <label for="month-select">Месяц</label>
-        <select id="month-select" v-model="month" @change="loadData" class="filter-select">
-          <option v-for="(name, index) in months" :key="index + 1" :value="index + 1">
-            {{ name }}
-          </option>
-        </select>
+        <label for="month-select">По дату</label>
+        <input type="date" v-model="toDate" @change="loadData" class="filter-select" />
       </div>
 
       <!-- Номер заказа -->
@@ -106,8 +116,8 @@
 
               <!-- 👇 ДИНАМИЧЕСКИЕ КОЛОНКИ (порядок из computed) -->
             <td
-                v-for="col in dynamicColumns"
-                :key="col.key"
+                v-for="(col, index) in dynamicColumns"
+                :key="`${col.key}_${index}`"
                 :style="{ textAlign: col.align || 'left' }"
                 :class="[
                       col.class,
@@ -131,10 +141,40 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
-const currentYear = new Date().getFullYear();
-const year = ref(currentYear); // можно добавить выбор года, если нужно
-const month = ref(new Date().getMonth() + 1); // текущий месяц: 1–12
+//const currentYear = new Date().getFullYear();
+// const year = ref(currentYear); // можно добавить выбор года, если нужно
+// const month = ref(new Date().getMonth() + 1); // текущий месяц: 1–12
+
 const orderNum = ref('');
+
+//TODO новый фильтр даты
+const now = new Date()
+const currentYear = now.getFullYear()
+const currentMonth = now.getMonth() + 1
+
+const fromDate = ref(
+    `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`
+)
+const toDate = ref(
+    `${currentYear}-${String(currentMonth).padStart(2, '0')}-${new Date(currentYear, currentMonth, 0).getDate()}`
+)
+
+// const filterFrom = computed(() => {
+//   return `${year.value}-${String(month.value).padStart(2, '0')}-01`;
+// });
+
+// const filterTo = computed(() => {
+//   const nextMonth = new Date(year.value, month.value, 0); // 0 = последний день
+//   const day = String(nextMonth.getDate()).padStart(2, '0');
+//   const mm = String(month.value).padStart(2, '0');
+//   return `${year.value}-${mm}-${day}`;
+// });
+
+// const months = [
+//   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+//   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+// ];
+
 
 //TODO модальное окно
 const editingProduct = ref(null);
@@ -171,11 +211,6 @@ const saveAndClose = async (updatedProduct) => {
 import EditProductModal from "@/components/EditProductModal.vue";
 import SummaryReport from '@/components/SummaryStats.vue';
 
-const months = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-];
-
 const typeStatus = {
   assigned: "Сотрудники назначены",
   final: "Готов",
@@ -185,16 +220,7 @@ const getTypeStatus = (type) => {
   return typeStatus[type] || type;
 };
 
-const filterFrom = computed(() => {
-  return `${year.value}-${String(month.value).padStart(2, '0')}-01`;
-});
 
-const filterTo = computed(() => {
-  const nextMonth = new Date(year.value, month.value, 0); // 0 = последний день
-  const day = String(nextMonth.getDate()).padStart(2, '0');
-  const mm = String(month.value).padStart(2, '0');
-  return `${year.value}-${mm}-${day}`;
-});
 
 // ТИПЫ
 const typeGroups = {
@@ -403,8 +429,8 @@ const loadData = async () => {
     });
 
     // Диапазон дат по месяцу
-    params.append('from', filterFrom.value);
-    params.append('to', filterTo.value);
+    params.append('from', fromDate.value);
+    params.append('to', toDate.value);
     params.append('order_num', orderNum.value);
 
 
@@ -433,8 +459,8 @@ const downloadExcel = async () => {
     });
 
     // Диапазон дат по месяцу
-    params.append('from', filterFrom.value);
-    params.append('to', filterTo.value);
+    params.append('from', fromDate.value);
+    params.append('to', toDate.value);
     params.append('order_num', orderNum.value);
 
 

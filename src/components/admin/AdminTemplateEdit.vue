@@ -109,7 +109,7 @@ async function loadTemplate(id) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     template.value = await res.json()
 
-    console.log(template.value);
+    //console.log(template.value);
 
   } catch (err) {
     console.error('Ошибка загрузки шаблона:', err)
@@ -166,7 +166,7 @@ async function saveTemplate() {
 
 onMounted(() => {
   const id = route.params.id
-  console.log(id);
+  //console.log(id);
   if (id) {
     loadTemplate(id)
   } else {

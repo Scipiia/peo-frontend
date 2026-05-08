@@ -9,6 +9,7 @@
       <h3>{{ getItemTitle(item) }}</h3>
       <div class="item-info">
         <span><strong>Тип:</strong> {{ item.type_izd }}</span>
+        <span><strong>Позиция:</strong> {{ item.position }}</span>
         <span><strong>Кол-во:</strong> {{ item.count }}</span>
         <span><strong>Создан:</strong> {{ formatDate(item.created_at) }}</span>
       </div>
@@ -125,6 +126,9 @@
       <button @click="goToPrint"  class="btn-print">
         Перейти к печати
       </button>
+<!--      <button @click="goToAssign(assembly)"  class="btn-print">-->
+<!--        Перейти к назначению-->
+<!--      </button>-->
     </div>
   </div>
 
@@ -150,7 +154,7 @@ onMounted(() => {
 
 // Обновляем operation_name при изменении operation_label
 const updateFixedOperation = (extra) => {
-  if (extra.operation_label === 'допвремя на напиловку') {
+  if (extra.operation_label === 'доп время на напиловку') {
     extra.operation_name = 'dop_nap';
   } else if (extra.operation_label === 'доп время на сборку') {
     extra.operation_name = 'dop_sbor';
@@ -188,10 +192,12 @@ const loadAssembly = async () => {
     if (!assemblyRes.ok) throw new Error('Не удалось загрузить сборку');
     const allItems = await assemblyRes.json();
 
+    //console.log(allItems);
     // Обновляем реактивное состояние
     assembly.value = allItems.map(item => ({
       id: item.id,
       order_num: item.order_num,
+      position: item.position,
       name: item.name,
       count: item.count,
       type: item.type,
@@ -342,6 +348,17 @@ const goToPrint = () => {
     },
   });
 };
+
+// const goToAssign = (assembly) => {
+//   //router.push(`/norm/orders/order-norm/edit/${order.id}`);
+//   console.log(assembly);
+//
+//   router.push({
+//     name: 'AssignWorkers',
+//     params: {id: assembly.id},
+//     query: {order_num: assembly.order_num}
+//   })
+// };
 
 // --- Возврат ---
 const goBack = () => {

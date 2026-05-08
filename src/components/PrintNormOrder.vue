@@ -19,27 +19,23 @@
               <th width="10%"></th>
             </tr>
             </thead>
-<!--            <tbody>-->
-<!--            <tr v-for="op in assembly.main.operations" :key="op.operation_name">-->
-<!--              <td>{{ op.operation_label }}</td>-->
-<!--              <td>{{ op.value.toFixed(3) }}</td>-->
-<!--              <td>{{ op.minutes }}</td>-->
-<!--              <td></td>-->
-<!--            </tr>-->
-<!--            <tr class="total-row">-->
-<!--              <td colspan="1" class="text-right"><strong>Итого:</strong></td>-->
-<!--              <td>{{ assembly.main.total_time.toFixed(3) }}</td>-->
-<!--              <td>{{ Math.round(assembly.main.total_time * 60) }}</td>-->
-<!--            </tr>-->
             <tbody>
             <template v-for="group in getGroupedOps(assembly.main.operations)" :key="group.title">
 
-              <tr v-for="(op, index) in group.items" :key="op.operation_name">
+              <tr v-for="(op, index) in group.items"
+                  :key="op.operation_name"
+                  :class="{ 'tall-row': needsTallRow(op.operation_name) }"
+              >
                 <td>{{ op.operation_label }}</td>
                 <td>{{ op.value.toFixed(3) }}</td>
                 <td>{{ op.minutes }}</td>
-                <td></td>
-                <!--                <td>{{ group.totalValue.toFixed(3) }}</td>-->
+                <td
+                    class="executor-cell"
+                    :class="{ 'has-divider': needsTallRow(op.operation_name) }"
+                >
+                  <span v-if="needsTallRow(op.operation_name)" class="executor-divider"></span>
+                </td>
+                <!--<td>{{ group.totalValue.toFixed(3) }}</td>-->
                 <td v-if="index === 0"
                     :rowspan="group.items.length"
                     style="vertical-align: middle; text-align: center; font-weight: bold; background: #fff; border-left: 2px solid #000; border-bottom: 2px solid #000"
@@ -325,7 +321,7 @@ function print() {
             width: 100%;
             border-collapse: collapse;
             margin: 4px 0;
-            font-size: 12px;
+            font-size: 15px;
           }
           th, td {
             border: 1px solid #000;
@@ -344,6 +340,26 @@ function print() {
             margin-top: 6px;
             break-inside: avoid;
             page-break-inside: avoid;
+          }
+          .executor-cell {
+            position: relative; /* Для позиционирования разделителя */
+            vertical-align: top;
+          }
+          .tall-row .executor-cell {
+            height: 50px;
+            vertical-align: top !important;
+          }
+          .executor-divider {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            border-top: 1px solid black; /* Пунктирная линия */
+            pointer-events: none; /* Чтобы не мешал кликам */
+          }
+          .executor-cell.has-divider .executor-divider {
+            display: block;
           }
           @media print {
             @page {
@@ -398,31 +414,61 @@ function print() {
 const OP_GROUPS_CONFIG = [
   {
     title: "Напиловка",
-    names: ["nastr_for_napil", "napil_bez_impost", "nastr_pbx", "pzr", "rabota_pbx", "podg_obor", "napil_ram_stv", "napil_don_soed", "napil_shtylp", "impost_napil", "nastr_pbx_vo",
+    names: ["nastr_for_napil", "napil_bez_impost", "dop_impost_napil", "nastr_pbx", "pzr", "rabota_pbx", "podg_obor", "napil_ram_stv", "napil_don_soed", "napil_shtylp", "impost_napil", "nastr_pbx_vo",
     "meh_obr_pzr", "rab_pbx_vo2", "frez_yst_shtylp_win", "obr_stv", "napil_donn", "napil_shtylp", "yst_adapt24", "napil_adapt24", "obr_ram_vo2", "napil_ugol", "napil", "nastr_obr_napil",
-    "napil_kontyr", "napil_krishek", "napil_stoik_do3m", "napil_ygol_30x30", "napil_rigel_do1m", "napil_rigel_bol1m", "napil_stoik_bol3m"]
+    "napil_kontyr", "napil_krishek", "napil_stoik_do3m", "napil_ygol_30x30", "napil_rigel_do1m", "napil_rigel_bol1m", "napil_stoik_bol3m", "napil_stv", "napil_ram", "frezer_vo2", "meh_obr_rychka",
+      "nastr_stan_napil", "obr_ram", "podg_obr_ram", "napil_ram_log", "napil_stv_log", "napil_pritvor_log", "napil_soed_log"]
   },
   {
     title: "Фрезеровка",
     names: ["frezer_nastr", "frezer_porog_sverl_promej_sbor", "opres_nastr", "opres", "frezer_porog_promej_sbor", "frez_yst_shtylp_door", "frezer_porog_ram_porog_shping_promej_sb", "sles_obr_yst_furn",
     "promej_sb_stv", "promej_sb_ram", "imp_frezer", "impost_sverlo", "impost_yst", "impost_frezer", "razm_sverl_otv", "promej_sb", "imp_sbor", "shtift", "yst_yplotn", "promej_sb2", "promej_sb_2ygl",
-    "promej_sb_2ygl_nest", "frezer_std_prof", "yst_zamkov", "promej_sb_3ygl_nest", "frezer2st_5nastr", "opres_4ygl", "sverl_rigel_zamok_2stor_frezer"]
+    "promej_sb_2ygl_nest", "frezer_std_prof", "yst_zamkov", "promej_sb_3ygl_nest", "frezer2st_5nastr", "opres_4ygl", "sverl_rigel_zamok_2stor_frezer", "frezer_porog_sverl", "promej_sbor", "dop_impost_frezer",
+     "dop_impost_sverl", "dop_impost_yst", "frezer_porog", "frezer_porog_ram_porog_shping", "opres_stv", "opres_ram", "frezer_ram_log", "frezer_stv_log", "frezer_pritvor_log"]
+  },
+  {
+    title: "Штамповка стоек лодж",
+    names: ["shtamp_stoek_log"]
+  },
+  {
+    title: "Брусок кп45",
+    names: ["krepl_brys", "podg_derj_shetki_frez"]
   },
   {
     title: "Установка",
-    names: ["yst_porog_ypl_derj_shetk_shtift", "podg_derj_shetki", "yst_porog_ypl_derj_shetk_ydal_germ_yst_zaglysh", "yst_porog_ypl_derj_shetk", "yst_ypl", "yst_ypl_ugl_shtift",  "yst_zpl_podg_shtapik"]
+    names: ["yst_porog_ypl_derj_shetk_shtift", "podg_derj_shetki", "yst_porog_ypl_derj_shetk_ydal_germ_yst_zaglysh", "yst_porog_ypl_derj_shetk", "yst_ypl", "yst_ypl_ugl_shtift",  "yst_zpl_podg_shtapik",
+    "yst_ypl_shtift", "yst_ypl_ugl_shtift_germet", "ystan_rolik_fetr_log", "ystan_zashel_fetr_log"]
   },
   {
     title: "Обработка и сборка замки",
     names: ["sbor_petli", "yst_dver_mnogozap_zamok_nakl_cilindr_stubl_yst_otv_plan23", "yst_dvr_zamok_nakl_cild_antipan", "navesh_stv_yst_otv_plan1_reg_petli", "navesh_stv_yst_otvplan_petl_rdrh",
     "yst_dver_zamok_nakl_cilindr", "navesh_stv_yst_otv_plan", "yst_dver_zamok_nakl_cilindr_stubl", "navesh_stv_yst_otv_plank_reg_petli", "napil_tag_stv", "obr_tag_stv", "podg_furn",
-    "yst_furn_stv", "navesh_ram_stv", "sbor_rychek", "rybka_tag", "podg_tag_yst_stv"]
+    "yst_furn_stv", "navesh_ram_stv", "sbor_rychek", "rybka_tag", "podg_tag_yst_stv", "yst_furn", "navesh_ram", "obrezen_log"]
+  },
+  {
+    title: "Сборка ств и притвора лоджии",
+    names: ["sborka_stv_log", "sborka_pritvor_log"]
   },
   {
     title: "Уплотнители",
     names: ["yst_zapoln", "ypl_falc", "yst_ypl_falc", "zashivka_stv"]
   }
 ];
+
+//Операции, требующие расширенной колонки для исполнителей
+const TALL_EXECUTOR_OPS = [
+  "promej_sbor", "yst_porog_ypl_derj_shetk_shtift", "yst_zapoln", "navesh_stv_yst_otv_plank_reg_petli", "navesh_stv_yst_otv_plan", "sles_obr_yst_furn", "opres_ram", "promej_sb_ram",
+    "promej_sb_stv", "yst_ypl", "zashivka_stv"
+];
+
+//Функция проверки
+const needsTallRow = (operationName) => {
+  if (!operationName) return false;
+  return TALL_EXECUTOR_OPS.some(name =>
+      operationName.toLowerCase().includes(name) ||
+      operationName === name
+  );
+};
 
 // Функция, которая группирует операции
 const getGroupedOps = (ops) => {
@@ -485,7 +531,7 @@ const getGroupedOps = (ops) => {
   width: 100%;
   border-collapse: collapse;
   margin: 4px 0;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .operations-table th,
@@ -642,5 +688,71 @@ const getGroupedOps = (ops) => {
 
 .btn-back:hover {
   background: #0056b3;
+}
+
+/* Обычная высота строки */
+.operations-table td {
+  height: 25px;
+}
+
+/* Увеличенная высота для операций с несколькими исполнителями */
+.tall-row td {
+  height: 60px; /* Достаточно места для 2-3 фамилий в столбик */
+  vertical-align: center; /* Чтобы начиналось сверху */
+}
+
+/* Базовая ячейка исполнителя */
+.executor-cell {
+  position: relative; /* Для позиционирования разделителя */
+  vertical-align: top;
+}
+
+/* Разделитель — скрыт по умолчанию */
+.executor-divider {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid black; /* Пунктирная линия */
+  pointer-events: none; /* Чтобы не мешал кликам */
+}
+
+/* Показываем разделитель только в расширенных строках */
+.executor-cell.has-divider .executor-divider {
+  display: block;
+}
+
+/* Для печати — делаем линию чуть тоньше и чёрной */
+@media print {
+  .executor-divider {
+    border-top-color: #000;
+    border-top-style: solid;
+    opacity: 0.7;
+  }
+}
+
+/* Для печати */
+@media print {
+  .operations-table td {
+    height: 20px;
+  }
+
+  .tall-row td {
+    height: 50px;
+    vertical-align: center !important;
+  }
+}
+
+.tall-row {
+  background-color: white;
+}
+
+@media print {
+  .tall-row {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 </style>

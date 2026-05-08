@@ -129,6 +129,9 @@
       <button @click="saveExecutors" :disabled="loading" class="btn-save">
         {{ loading ? 'Сохраняем...' : 'Сохранить назначения' }}
       </button>
+<!--      <button @click="goToNormirovka(assembly)" class="btn-view">-->
+<!--        Просмотр-->
+<!--      </button>-->
     </div>
   </div>
 
@@ -145,11 +148,10 @@ const router = useRouter();
 
 // Состояние
 const assembly = ref(null);       // вся сборка: main + subs
-//const employees = ref([]);
 const loading = ref(false);
 const dateAccounting = ref('');
-const employeesByType = ref({}); // список сотрудников
-const employeesLoading = ref({}); // 👈 Новый реактивный объект для статусов
+const employeesByType = ref({});
+const employeesLoading = ref({});
 
 const isExecutorSelected = (executors, empId, currentExecutor) => {
   return executors.some(ex =>
@@ -160,84 +162,108 @@ const isExecutorSelected = (executors, empId, currentExecutor) => {
 // --- Загрузка данных ---
 onMounted(async () => {
   const id = route.params.id;
-  if (!id) return;
+  const source = route.query.source
+
+  if (!id) {
+    console.warn('No order ID in route params');
+    return;
+  }
 
   loading.value = true;
 
+  console.log('Loading order details:', { id, source });
+
   try {
-    // Прямо используем id как rootId — потому что он гарантированно main
-    const assemblyRes = await fetch(`/api/orders/order-norm/${id}`);
-    if (!assemblyRes.ok) throw new Error('Не удалось загрузить сборку');
+    const url = `/api/orders/order-norm/${id}/details?source=${source}`;
+    console.log('Fetching:', url);
+
+    const assemblyRes = await fetch(url);
+
+    if (!assemblyRes.ok) {
+      const errorText = await assemblyRes.text().catch(() => 'No error details');
+      throw new Error(`HTTP ${assemblyRes.status}: ${errorText}`);
+    }
+
     const data = await assemblyRes.json();
+    console.log('API Response:', data);
+
+    // ✅ Защита 1: проверяем, что data — массив
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Пустой или некорректный ответ от сервера');
+    }
+
+    // ✅ Защита 2: обрабатываем операции с защитой от null
+    const processedItems = data.map(item => {
+      // Гарантируем, что operations — массив (даже если пришло null/undefined)
+      const operations = Array.isArray(item.operations) ? item.operations : [];
+
+      return {
+        ...item,
+        operations: operations.map(op => {
+          // Гарантируем, что assign_workers — массив
+          const assignWorkers = Array.isArray(op.assign_workers) ? op.assign_workers : [];
+
+          const executors = assignWorkers.length > 0
+              ? assignWorkers.map(ex => ({
+                employee_id: ex.employee_id ?? '',
+                actual_minutes: ex.actual_minutes ?? 0,
+                actual_value: ex.actual_value ? parseFloat(ex.actual_value.toFixed(3)) : 0
+              }))
+              : [{
+                employee_id: '',
+                actual_minutes: op.minutes ?? 0,
+                actual_value: op.value ? parseFloat(op.value.toFixed(3)) : 0
+              }];
+
+          return {
+            ...op,
+            executors
+          };
+        })
+      };
+    });
 
 
-    const processedItems = data.map(item => ({
-      ...item,
-      operations: item.operations.map(op => {
-        // Если есть assign_workers и это массив — используем его
-        const executors = Array.isArray(op.assign_workers) && op.assign_workers.length > 0
-            ? op.assign_workers.map(ex => ({
-              employee_id: ex.employee_id,
-              actual_minutes: ex.actual_minutes,
-              actual_value: parseFloat(ex.actual_value.toFixed(3))
-            }))
-            : [{
-              // Иначе — один пустой исполнитель с нормой времени
-              employee_id: '',
-              actual_minutes: op.minutes,
-              actual_value: parseFloat(op.value.toFixed(3))
-            }];
-
-        return {
-          ...op,
-          executors // ← уже массив
-        };
-      })
-    }));
+    // ✅ Защита 3: находим main и subs
+    const main = processedItems.find(i => i?.part_type === 'main') || processedItems[0];
+    const subs = processedItems.filter(i => i?.part_type === 'sub');
 
 
-    // Разделяем
-    const main = processedItems.find(i => i.part_type === 'main') || processedItems[0];
-    const subs = processedItems.filter(i => i.part_type === 'sub');
+    console.log("MAIN", main);
+    console.log("SUB", subs);
 
-
-    // console.log("MAIN", main);
-    // console.log("SUB", subs);
-
+    // ✅ Только теперь заполняем assembly.value
     assembly.value = { main, subs };
+
+    // ✅ Загружаем сотрудников для типа заказа
+    const orderType = main.type || 'other';
+    await loadEmployeesForType(orderType);
+
   } catch (err) {
-    console.error('Ошибка загрузки:', err);
-    alert('Не удалось загрузить данные');
+    console.error('❌ Ошибка загрузки:', err);
+    alert('Не удалось загрузить данные: ' + err.message);
+    // ✅ Сбрасываем assembly.value в безопасное состояние, чтобы не было "null.main"
+    assembly.value = null;
   } finally {
     loading.value = false;
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  // Извлекаем дату из ISO-строки (убираем время)
-  const rawDate = assembly.value.main.ready_date;
+  // ✅ Блок с датой — только если assembly.value и main гарантированно есть
+  if (assembly.value?.main) {
+    const today = new Date().toISOString().split('T')[0];
+    const rawDate = assembly.value.main.ready_date;
 
-  let accountingDate = today;
+    let accountingDate = today;
 
-  if (rawDate) {
-    // Пробуем преобразовать, если это ISO-строка
-    const datePart = new Date(rawDate).toISOString().split('T')[0];
-    // Проверим, валидна ли дата
-    if (datePart !== 'Invalid date') {
-      accountingDate = datePart;
+    if (rawDate) {
+      const datePart = new Date(rawDate).toISOString().split('T')[0];
+      if (datePart !== 'Invalid Date' && !isNaN(new Date(rawDate).getTime())) {
+        accountingDate = datePart;
+      }
     }
+
+    dateAccounting.value = accountingDate;
   }
-
-  dateAccounting.value = accountingDate;
-
-  // Загрузка сотрудников
-  // try {
-  //   const empRes = await fetch('/api/workers/all');
-  //   employees.value = await empRes.json();
-  //
-  //   console.log("EMPP", employees.value);
-  // } catch (err) {
-  //   console.error('Ошибка загрузки сотрудников:', err);
-  // }
 });
 
 const loadEmployeesForType = async (type) => {
@@ -305,7 +331,8 @@ const getTypeLabel = (type) => {
     glyhar: 'Глухарь',
     door: 'Дверь',
     loggia: 'Лоджия',
-    vitrage: 'Витраж'
+    vitrage: 'Витраж',
+    mosquito: 'Москитка'
   };
   return labels[type] || type;
 };
@@ -365,7 +392,6 @@ const updateExecutorsEvenly = (op) => {
   });
 };
 
-// --- Сохранение ---
 const saveExecutors = async () => {
   const payload = {
     assignments: [],
@@ -431,6 +457,19 @@ const saveExecutors = async () => {
     //alert('Не удалось сохранить');
   }
 };
+
+// const goToNormirovka = (assembly) => {
+//   //router.push(`/norm/orders/order-norm/edit/${order.id}`);
+//   console.log(assembly);
+//
+//   saveExecutors()
+//
+//   router.push({
+//     name: 'EditNormOrder',
+//     params: {id: assembly.id},
+//     query: {order_num: assembly.order_num}
+//   })
+// };
 
 // --- Возврат ---
 const goBack = () => {

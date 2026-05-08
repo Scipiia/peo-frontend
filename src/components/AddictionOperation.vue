@@ -1,8 +1,5 @@
 <template>
   <div class="additional-ops">
-    <h3 class="additional-ops-label">
-      <label>Доп работы</label>
-    </h3>
     <table class="operations-table">
       <thead>
       <tr>

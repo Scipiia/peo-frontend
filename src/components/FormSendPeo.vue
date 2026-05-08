@@ -367,11 +367,15 @@ const categoryLabels = {
 watch(isComposite, async (newValue) => {
   if (newValue && cardInfo.value.order_num) {
     try {
-      const res = await fetch(`/api/orders/order-norm/by-order?order_num=${cardInfo.value.order_num}`);
+      const pos = cardInfo.value.position
+
+      //const res = await fetch(`/api/orders/order-norm/by-order?order_num=${cardInfo.value.order_num}`);
+      const res = await fetch(`/api/orders/order-norm/by-order?order_num=${cardInfo.value.order_num}&position=${pos}`);
       if (res.ok) {
         const allItems = await res.json();
+        //console.log("REEEEESS", allItems);
         // Оставляем только основные изделия (которые могут быть родителями)
-        availableParents.value = allItems.filter(item => item.part_type === 'main');
+        availableParents.value = allItems.filter(item => item.part_type === 'main' && item.position === parseInt(pos));
       } else {
         availableParents.value = [];
       }
@@ -656,6 +660,7 @@ function saveNormirovka() {
           }
         }
 
+        customInputs.value= [{name: "", minutes: 0, count: 1}]
         // Спрашиваем, будем ли добавлять ещё части
         const createMore = confirm(
             `Нормировка "${fullForm.value.name}" сохранена!\n\nХотите добавить ещё одну часть?`
@@ -733,7 +738,7 @@ async function recalculateNorms() {
       })
     });
 
-    console.log("RESP", response);
+    //console.log("RESP", response);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -744,6 +749,7 @@ async function recalculateNorms() {
 
     calculationContext.value = recalculatedOps.context;
 
+    //console.log(calculationContext.value);
     //console.log(calculationContext.value);
 
 
@@ -826,6 +832,15 @@ const customOperationsToSend = computed(() => {
         };
       });
 });
+
+// Вынесите логику очистки в отдельную функцию для удобства
+// const resetCustomOperations = () => {
+//   // Сбрасываем к состоянию "одна пустая строка", как у вас было изначально
+//   customInputs.value = [{ name: '', minutes: 0, count: 1 }];
+//
+//   // Опционально: если есть другие связанные состояния, их тоже можно сбросить здесь
+//   // console.log('Дополнительные операции очищены');
+// };
 
 // TODO конец костыля
 
