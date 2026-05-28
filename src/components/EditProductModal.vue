@@ -59,10 +59,13 @@ const isLoggia = computed(() => {
   return localProduct.value.type === 'loggia';
 })
 
+const isMosquito = computed(() => {
+  return localProduct.value.type === 'mosquito';
+})
+
 // список бригад
 const brigadeTypeOptions = ['бригада', 'бригада окон, дверей', 'бригада лоджий'];
 
-// === Валидация ===
 // === Валидация ===
 const errors = ref({});
 
@@ -73,19 +76,27 @@ const validate = () => {
   const baseFields = [
     { key: 'type_izd', label: 'Наименование' },
     { key: 'sqr', label: 'Площадь' },
-    { key: 'brigade', label: 'Бригада' },
+      //{ key: 'brigade', label: 'Бригада' },
     { key: 'norm_money', label: 'Н/руб' },
     { key: 'customer_type', label: 'Направление заказчика' },
     { key: 'coefficient', label: 'Коэффициент' }
   ];
 
+  let conditionalFields = [];
+
   // Поля, которые нужны только для НЕ-лоджий
-  const conditionalFields = !isLoggia.value
-      ? [
+  // Система и Профиль нужны всем, кроме Лоджий и Москиток
+  if (!isLoggia.value && !isMosquito.value) {
+    conditionalFields.push(
         { key: 'systema', label: 'Система' },
         { key: 'profile', label: 'Профиль' }
-      ]
-      : [];
+    );
+  }
+
+  // Бригада нужна всем, кроме Москиток (ЛОджиям оставим, если нужно, или тоже уберите условие isLoggia)
+  if (!isMosquito.value) {
+    conditionalFields.push({ key: 'brigade', label: 'Бригада' });
+  }
 
   const allRequired = [...baseFields, ...conditionalFields];
 
@@ -185,7 +196,7 @@ const cancel = () => {
       <h3>Редактирование изделия</h3>
 
       <!-- Спецификация (необязательное поле) -->
-      <div class="form-group">
+      <div v-if="!isMosquito && !isLoggia" class="form-group">
         <label>Спецификация</label>
         <input
             v-model="localProduct.parent_assembly"
@@ -259,7 +270,7 @@ const cancel = () => {
       </div>
 
       <!-- Система -->
-      <div v-if="!isLoggia" class="form-group" :class="{ 'error': errors.systema }">
+      <div v-if="!isLoggia && !isMosquito" class="form-group" :class="{ 'error': errors.systema }">
         <label>Система</label>
         <select
             v-model="localProduct.systema"
@@ -280,7 +291,7 @@ const cancel = () => {
       </div>
 
       <!-- Профиль -->
-      <div v-if="!isLoggia" class="form-group" :class="{ 'error': errors.profile }">
+      <div v-if="!isLoggia && !isMosquito" class="form-group" :class="{ 'error': errors.profile }">
         <label>Профиль</label>
         <select
           v-model="localProduct.profile"
@@ -317,7 +328,7 @@ const cancel = () => {
       </div>
 
       <!-- Бригада -->
-      <div class="form-group" :class="{ 'error': errors.brigade }">
+      <div v-if="!isMosquito" class="form-group" :class="{ 'error': errors.brigade }">
         <label>Бригада</label>
         <select
             v-model="localProduct.brigade"

@@ -158,6 +158,7 @@ const loading = ref(true);
 
 onMounted(async () => {
   const id = route.params.id;
+  const source = route.params.source
   if (!id) {
     alert("Не указан ID");
     return;
@@ -165,7 +166,7 @@ onMounted(async () => {
 
   try {
     // Получаем текущий элемент для определения rootId
-    const itemRes = await fetch(`/api/orders/order-norm/${id}`);
+    const itemRes = await fetch(`/api/orders/order-norm/${id}/details?source=${source}`);
     if (!itemRes.ok) throw new Error(`Ошибка загрузки элемента: ${itemRes.status}`);
     const itemData = await itemRes.json();
 
@@ -182,7 +183,7 @@ onMounted(async () => {
     }
 
     // Загружаем всю сборку
-    const assemblyRes = await fetch(`/api/orders/order-norm/${rootId}`);
+    const assemblyRes = await fetch(`/api/orders/order-norm/${rootId}/details?source=${source}`);
     if (!assemblyRes.ok) throw new Error(`Не удалось загрузить сборку: ${assemblyRes.status}`);
     const data = await assemblyRes.json();
 

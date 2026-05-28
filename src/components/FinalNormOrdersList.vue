@@ -229,12 +229,16 @@ const typeGroups = {
     types: ['window', 'door', 'glyhar']
   },
   loggia: {
-    label: 'Лоджии и витражи',
-    types: ['loggia', 'vitrage']
+    label: 'Лоджии',
+    types: ['loggia']
   },
   mosquito_net: {
     label: 'Москитные сетки',
-    types: ['ms']
+    types: ['mosquito']
+  },
+  vodootliv: {
+    label: 'Водоотлив',
+    types: ['vodootliv']
   }
 };
 
@@ -244,7 +248,9 @@ const typeGroups = {
 const dynamicColumns = computed(() => {
   const selected = activeBackendTypes.value;
   const hasWindows = selected.some(t => ['window', 'door', 'glyhar'].includes(t));
-  const hasLoggias = selected.some(t => ['loggia', 'vitrage'].includes(t));
+  const hasLoggias = selected.some(t => ['loggia'].includes(t));
+  const hasMosquito = selected.some(t => ['mosquito'].includes(t));
+  const hasVodootliv = selected.some(t => ['vodootliv'].includes(t));
 
   const columns = [];
 
@@ -285,6 +291,22 @@ const dynamicColumns = computed(() => {
         {key: 'count', label: 'количество', width: '90px', align: 'center'},
         {key: 'sqr', label: 'площадь', width: '90px', align: 'center'},
         {key: 'total_time', label: 'н/час', width: '90px', align: 'center', class: 'col-total'},
+    )
+  }
+
+  if (hasMosquito) {
+    columns.push(
+        {key: 'name', label: 'наименование', width: '100px', align: 'center'},
+        {key: 'count', label: 'количество', width: '40px', align: 'center'},
+        {key: 'sqr', label: 'площадь', width: '40px', align: 'center'},
+        {key: 'total_time', label: 'н/час', width: '90px', align: 'center', class: 'col-total'},
+        {key: 'type_izd', label: 'вид изделия', width: '90px', align: 'center'},
+    )
+  }
+
+  if (hasVodootliv) {
+    columns.push(
+        {key: 'name', label: 'наименование', width: '100px', align: 'center'},
     )
   }
 
@@ -331,8 +353,6 @@ const getValueByColumn = (product, columnKey) => {
   // 4. Всё остальное — как есть (строки, даты и т.д.)
   return value;
 };
-
-//TODO
 
 const selectedTypes = ref(['combined']);
 
@@ -406,7 +426,7 @@ const formatType = (type) => {
     'door': 'Дверь',
     'loggia': 'Лоджия',
     'vitrage': 'Витраж',
-    'ms': 'Москитная сетка',
+    'mosquito': 'Москитная сетка',
     'glyhar': 'Глухое окно',
   };
 

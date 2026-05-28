@@ -62,27 +62,27 @@
       <p v-if="availableParents.length === 0" class="text-muted">
         Нет доступных основных изделий. Сначала добавьте основное (дверь, окно и т.п.).
       </p>
-      <div class="parent-selection">
-        <!-- Поле "Уточнение для части" -->
-        <label class="form-control"><strong>Уточнение для части:</strong></label>
-        <select
-            v-model="selectedPartDetail"
-            class="form-custom-select"
-        >
-          <option value="">— выберите —</option>
-          <option value="с глухарем">с глухарем</option>
-        </select>
+<!--      <div class="parent-selection">-->
+<!--        &lt;!&ndash; Поле "Уточнение для части" &ndash;&gt;-->
+<!--        <label class="form-control"><strong>Уточнение для части:</strong></label>-->
+<!--        <select-->
+<!--            v-model="selectedPartDetail"-->
+<!--            class="form-custom-select"-->
+<!--        >-->
+<!--          <option value="">— выберите —</option>-->
+<!--          <option value="с глухарем">с глухарем</option>-->
+<!--        </select>-->
 
-        <!-- Поле "Наименование" -->
-        <label class="form-control"><strong>Наименование:</strong></label>
-        <select
-            v-model="selectedName"
-            class="form-custom-select"
-        >
-          <option value="">— выберите —</option>
-          <option value="витраж к двери">витраж к двери</option>
-        </select>
-      </div>
+<!--        &lt;!&ndash; Поле "Наименование" &ndash;&gt;-->
+<!--        <label class="form-control"><strong>Наименование:</strong></label>-->
+<!--        <select-->
+<!--            v-model="selectedName"-->
+<!--            class="form-custom-select"-->
+<!--        >-->
+<!--          <option value="">— выберите —</option>-->
+<!--          <option value="витраж к двери">витраж к двери</option>-->
+<!--        </select>-->
+<!--      </div>-->
     </div>
 
     <!-- Выбор формы нормировки -->

@@ -167,13 +167,14 @@ const loadAssembly = async () => {
   loading.value = true;
   try {
     const id = route.params.id;
+    const source = route.query.source || '';
     if (!id) {
       console.error("Не указан ID наряда");
       return router.push('/norm/orders/');
     }
 
     // Получаем текущий наряд
-    const itemRes = await fetch(`/api/orders/order-norm/${id}`);
+    const itemRes = await fetch(`/api/orders/order-norm/${id}/details?source=${source}`);
     if (!itemRes.ok) throw new Error('Наряд не найден');
     const currentItem = await itemRes.json();
 
@@ -188,7 +189,7 @@ const loadAssembly = async () => {
     }
 
     // Загружаем всю сборку
-    const assemblyRes = await fetch(`/api/orders/order-norm/${rootId}`);
+    const assemblyRes = await fetch(`/api/orders/order-norm/${rootId}/details?source=${source}`);
     if (!assemblyRes.ok) throw new Error('Не удалось загрузить сборку');
     const allItems = await assemblyRes.json();
 

@@ -35,56 +35,50 @@ function aggregate(items) {
 const summaryData = computed(() => {
   const products = props.products;
 
-  // --- 1. Холодные и тёплые окна ---
+  // --- 1. Холодные и тёплые окна (включая витражи/глухари, так как спец. фильтра нет) ---
   const coldWindows = products.filter(p =>
-      (p.type === 'window' || p.type === 'glyhar') && normalize(p.systema).includes('х') && normalize(p.type_izd) !== 'витраж к двери'
+      (p.type === 'window' || p.type === 'glyhar') && normalize(p.systema).includes('х')
   );
 
   const hotWindows = products.filter(p =>
-      (p.type === 'window' || p.type === 'glyhar') && normalize(p.systema).includes('т') && normalize(p.type_izd) !== 'витраж к двери'
+      (p.type === 'window' || p.type === 'glyhar') && normalize(p.systema).includes('т')
   );
 
-  // --- 2. Глухие окна (только те, где НЕ витраж к двери) ---
-  // const glyhar = products.filter(p =>
-  //     p.type === 'glyhar' &&
-  //     normalize(p.type_izd) !== 'витраж к двери'
-  // );
+  // --- 2. Все окна = cold + hot ---
+  const allWindows = [...coldWindows, ...hotWindows];
 
-  // --- 3. Витраж к двери (отдельно) ---
-  const vitrajDoors = products.filter(p =>
-      p.type === 'glyhar' &&
-      normalize(p.type_izd) === 'витраж к двери'
-  );
-
-  // --- 4. Все окна = cold + hot + чистые глухари ---
-  const allWindows = [...coldWindows, ...hotWindows, ...vitrajDoors];
-
-  const allDoors1p = products.filter(p =>p.type ==='door' && (p.type_izd === '1П' || p.type_izd === '1Пт'));
-  const allDoors15p = products.filter(p =>p.type ==='door' && (p.type_izd === '1.5П' || p.type_izd === '1.5Пт'));
-  const allDoors2p = products.filter(p =>p.type ==='door' && (p.type_izd === '2П' || p.type_izd === '2Пт'));
+  const allDoors1p = products.filter(p => p.type === 'door' && (p.type_izd === '1П' || p.type_izd === '1Пт'));
+  const allDoors15p = products.filter(p => p.type === 'door' && (p.type_izd === '1.5П' || p.type_izd === '1.5Пт'));
+  const allDoors2p = products.filter(p => p.type === 'door' && (p.type_izd === '2П' || p.type_izd === '2Пт'));
 
   const loggias = products.filter(p => p.type === 'loggia');
-  const mosquitoNets = products.filter(p => p.type === 'ms');
+
+  // Исправлено: тип москиток теперь 'mosquito', а не 'ms' (согласно вашему бэкенду)
+  const mosquitoAll = products.filter(p => p.type === 'mosquito');
+  const mosquitoVsn = products.filter(p => p.type_izd === "vsn");
+  const mosquitoMs = products.filter(p => p.type_izd === "ms");
+  const moscuitoMixed = products.filter(p => p.type_izd.includes('+'))
 
   const coldStats = aggregate(coldWindows);
   const hotStats = aggregate(hotWindows);
   const allWindowStats = aggregate(allWindows);
-  //const glyharStats = aggregate(glyhar);
-  const vitrajStats = aggregate(vitrajDoors);
-
-  const loggiaStats = aggregate(loggias);
-  const mosquitoStats = aggregate(mosquitoNets);
 
   const allDoor1p = aggregate(allDoors1p)
   const allDoor15p = aggregate(allDoors15p)
   const allDoor2p = aggregate(allDoors2p)
 
-  // Формируем группы
+  const loggiaStats = aggregate(loggias);
+
+
+  const mosquitoAllStats = aggregate(mosquitoAll);
+  const mosquitoVsnStats = aggregate(mosquitoVsn);
+  const mosquitoMsStats = aggregate(mosquitoMs);
+  const mosquitoMixedStats = aggregate(moscuitoMixed);
+
+  // Формируем группы для отображения
   const windowGroups = [
     { type_izd: 'Холодные окна', profile: 'х', ...coldStats },
     { type_izd: 'Теплые окна', profile: 'т', ...hotStats },
-    //{ type_izd: 'Всего глухих окон', profile: '', ...glyharStats },
-    { type_izd: 'Витраж к двери', profile: '', ...vitrajStats },
     { type_izd: 'Всего окон', profile: '', ...allWindowStats },
     { type_izd: 'Всего 1П дверей', profile: '', ...allDoor1p },
     { type_izd: 'Всего 1.5П дверей', profile: '', ...allDoor15p },
@@ -97,14 +91,16 @@ const summaryData = computed(() => {
     ...loggiaStats
   }] : [];
 
-  const mosquitoGroup = mosquitoStats.count > 0 ? [{
-    type_izd: 'Москитные сетки',
-    profile: '',
-    ...mosquitoStats
-  }] : [];
+  // Общая строка для москиток (для нижней таблицы итогов)
+  const mosquitoTotalGroup = [
+    {type_izd: "VSN", ...mosquitoVsnStats},
+    {type_izd: "Обычная", ...mosquitoMsStats},
+    {type_izd: "Комбинированные", ...mosquitoMixedStats},
+    {type_izd: "Всего москитных сеток", ...mosquitoAllStats},
+  ];
 
-  // Общие итоги(позже добавятся витражи, москитки)
-  const total = [allWindowStats, allDoor1p, allDoor15p, allDoor2p]
+  // Общие итоги
+  const total = [allWindowStats, allDoor1p, allDoor15p, allDoor2p, loggiaStats, mosquitoStatsDetailed.value.total]
       .reduce((acc, g) => ({
         count: acc.count + g.count,
         sqr: acc.sqr + g.sqr,
@@ -122,12 +118,11 @@ const summaryData = computed(() => {
   return {
     windowGroups,
     loggiaGroup,
-    mosquitoGroup,
+    mosquitoTotalGroup,
     totalRounded
   };
 });
 
-// Список всех нужных комбинаций
 const expectedGroups = [
   { type_izd: 'окно гл.', profile: 'ах' },
   { type_izd: 'окно гл.', profile: 'ат' },
@@ -154,11 +149,6 @@ const expectedGroups = [
   { type_izd: '2Пт', profile: 'ат' },
   { type_izd: '2Пт', profile: 'ст' },
   { type_izd: '2Пт', profile: 'ш' },
-  { type_izd: 'витраж к двери', profile: 'сх' },
-  { type_izd: 'витраж к двери', profile: 'ст' },
-  { type_izd: 'витраж к двери', profile: 'ах' },
-  { type_izd: 'витраж к двери', profile: 'ат' },
-  { type_izd: 'витраж к двери', profile: 'ш' },
 ];
 
 function getFixedGroupingWithUnmatched(products) {
@@ -178,9 +168,14 @@ function getFixedGroupingWithUnmatched(products) {
   );
 
   const productMap = new Map();
-  const unmatched = []; // ← сюда попадут "потерянные"
+  const unmatched = [];
 
   products.forEach(p => {
+    // Пропускаем лоджии и москитки в этой строгой группировке, если они не описаны в expectedGroups
+    if (p.type === 'loggia' || p.type === 'mosquito') {
+      return;
+    }
+
     const key = mapKey(p);
     if (expectedKeys.has(key)) {
       if (!productMap.has(key)) {
@@ -229,11 +224,54 @@ const formatType = (type) => {
     'window': 'Окно',
     'door': 'Дверь',
     'loggia': 'Лоджия',
-    'ms': 'Москитная сетка',
+    'mosquito': 'Москитная сетка',
     'glyhar': 'Глухое окно',
   };
   return map[type] || type;
 };
+
+// --- Логика разбиения москиток ---
+const mosquitoStatsDetailed = computed(() => {
+  const nets = props.products.filter(p => p.type === 'mosquito');
+
+  let vsn = { count: 0, sqr: 0, hours: 0, money: 0 };
+  let ms = { count: 0, sqr: 0, hours: 0, money: 0 };
+  let mixed = { count: 0, sqr: 0, hours: 0, money: 0 };
+
+  nets.forEach(p => {
+    const typeIzd = normalize(p.type_izd);
+
+    // Простая эвристика: если есть "+", значит смешанный
+    if (typeIzd.includes('+')) {
+      mixed.count += p.count;
+      mixed.sqr += p.sqr;
+      mixed.hours += p.total_time;
+      mixed.money += p.norm_money;
+    }
+    // Если содержит "vsn" но нет плюса — чистый VSN
+    else if (typeIzd.includes('vsn')) {
+      vsn.count += p.count;
+      vsn.sqr += p.sqr;
+      vsn.hours += p.total_time;
+      vsn.money += p.norm_money;
+    }
+    // Остальное — обычные (ms)
+    else {
+      ms.count += p.count;
+      ms.sqr += p.sqr;
+      ms.hours += p.total_time;
+      ms.money += p.norm_money;
+    }
+  });
+
+  return {
+    vsn: { label: 'VSN (внутренние)', ...vsn },
+    ms: { label: 'Обычные (МС)', ...ms },
+    mixed: { label: 'Смешанные заказы', ...mixed },
+    total: aggregate(nets)
+  };
+});
+
 
 </script>
 
@@ -288,18 +326,26 @@ const formatType = (type) => {
   </div>
 
   <!-- Москитные сетки -->
-  <div v-if="summaryData.mosquitoGroup.length > 0" class="summary-stats">
+  <div v-if="summaryData.mosquitoTotalGroup.length > 0" class="summary-stats">
     <h4>Москитные сетки</h4>
     <table class="summary-table">
-      <tbody>
-      <tr v-for="group in summaryData.mosquitoGroup" :key="group.type_izd">
-        <td>{{ group.type_izd }}</td>
-        <td>{{ group.profile }}</td>
-        <td>{{ group.count }}</td>
-        <td>{{ group.sqr }}</td>
-        <td>{{ group.hours }}</td>
-        <td>{{ group.money }}</td>
+      <thead>
+      <tr>
+        <th>Тип</th>
+        <th>Кол-во</th>
+        <th>Площадь, м²</th>
+        <th>Н/час</th>
+        <th>Н/руб</th>
       </tr>
+      </thead>
+      <tbody>
+        <tr v-for="group in summaryData.mosquitoTotalGroup" :key="group.type_izd">
+          <td> {{group.type_izd}} </td>
+          <td> {{group.count}} </td>
+          <td> {{group.sqr}} </td>
+          <td> {{group.hours}} </td>
+          <td> {{group.money}} </td>
+        </tr>
       </tbody>
     </table>
   </div>

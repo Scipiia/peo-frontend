@@ -24,6 +24,7 @@
           <option value="loggia">Лоджии</option>
           <option value="vitrage">Витражи</option>
           <option value="mosquito">Москитные сетки</option>
+          <option value="vodootliv">Водоотливы</option>
         </select>
       </div>
     </div>
@@ -53,9 +54,9 @@
           <span :class="`type-badge type-${order.type}`">{{ getTypeLabel(order.type) }}</span>
         </td>
         <td class="text-right">{{ order.total_time.toFixed(3) }}</td>
-        <td>{{ new Date(order.created_at).toLocaleDateString() }}</td>
+        <td>{{ new Date(order.created_at).toLocaleDateString('ru-RU', { timeZone: 'UTC' }) }}</td>
         <td>
-          <button @click="goToNormirovka(order)" class="btn-view">
+          <button v-if="order.type !== 'mosquito'" @click="goToNormirovka(order)" class="btn-view">
             Просмотр
           </button>
           <button @click="goToWorkers(order)" class="btn-view">
@@ -86,8 +87,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from "axios";
+import {watch} from "vue";
 
 const router = useRouter();
 
@@ -100,6 +102,7 @@ const filters = ref({
 // Список заказов
 const orders = ref([]);
 const loading = ref(false);
+const route = useRoute();
 
 // Отображаемые названия типов
 const typeLabels = {
@@ -108,6 +111,7 @@ const typeLabels = {
   door: 'Дверь',
   loggia: 'Лоджия',
   vitrage: 'Витраж',
+  vodootliv: "Водоотлив",
   mosquito: "Москитка",
   other: 'Другое'
 };
@@ -132,6 +136,30 @@ const applyFilters = () => {
   fetchOrders();
 };
 
+
+onMounted(() => {
+  // Если в URL есть order_num, подставляем его в фильтр
+  if (route.query.order_num) {
+    filters.value.order_num = route.query.order_num;
+  }
+
+  // Загружаем данные
+  fetchOrders();
+});
+
+watch(
+    () => filters.value.order_num,
+    (newVal) => {
+      // Обновляем URL, не перезагружая страницу
+      router.replace({
+        query: {
+          ...route.query,
+          order_num: newVal || undefined // если пусто, убираем параметр из URL
+        }
+      });
+    }
+);
+
 // Загрузка заказов
 const fetchOrders = async () => {
   loading.value = true;
@@ -154,7 +182,7 @@ const fetchOrders = async () => {
     // data — массив. Если null → []
     orders.value = Array.isArray(data) ? data : [];
 
-    console.log(orders.value);
+    //console.log(orders.value);
 
   } catch (err) {
     console.error('Ошибка сети:', err);
@@ -174,11 +202,31 @@ const goToNormirovka = (order) => {
   })
 };
 
-const goToWorkers = (order) => {
+
+const goToWorkers = async (order) => {
+  if (order.type === 'vodootliv') {
+    // Проверяем, нужен ли калькулятор
+    try {
+      const res = await fetch(`/api/orders/order-norm/${order.id}/details?source=vodootliv`);
+      if (res.status === 409) {
+        // Переход на страницу калькулятора
+        router.push({
+          name: 'NashchelnikCalculator',
+          query: {
+            legacy_id: order.id,
+            order_num: order.order_num
+          }
+        });
+        return;
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  // Стандартный переход
   router.push({
     name: 'AssignWorkers',
     params: { id: order.id },
-    query: {source: order.type}
+    query: { source: order.type }
   });
 };
 
@@ -289,6 +337,7 @@ h2 {
 .type-badge.type-loggia { background: #fd7e14; }
 .type-badge.type-vitrage{ background: #6f42c1; }
 .type-badge.type-mosquito{ background: #6f7849; }
+.type-badge.type-vodootliv{ background: #6c757d; }
 
 .btn-view {
   padding: 6px 12px;
@@ -298,6 +347,7 @@ h2 {
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
+  margin-right: 2px;
 }
 
 .btn-view:hover {

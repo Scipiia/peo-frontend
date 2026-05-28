@@ -63,7 +63,7 @@
             :class="{ 'missing-executor': op.executors.every(ex => !ex.employee_id) }"
         >
           <td>{{ op.operation_label }}</td>
-          <td class="text-center">{{ op.minutes }}</td>
+          <td class="text-center">{{ op.minutes.toFixed(1) }}</td>
           <td class="text-center">{{ op.value.toFixed(3) }}</td>
           <td>
             <!-- Исполнители -->
@@ -171,11 +171,11 @@ onMounted(async () => {
 
   loading.value = true;
 
-  console.log('Loading order details:', { id, source });
+  //console.log('Loading order details:', { id, source });
 
   try {
     const url = `/api/orders/order-norm/${id}/details?source=${source}`;
-    console.log('Fetching:', url);
+    //console.log('Fetching:', url);
 
     const assemblyRes = await fetch(url);
 
@@ -185,7 +185,7 @@ onMounted(async () => {
     }
 
     const data = await assemblyRes.json();
-    console.log('API Response:', data);
+    //console.log('API Response:', data);
 
     // ✅ Защита 1: проверяем, что data — массив
     if (!Array.isArray(data) || data.length === 0) {
@@ -206,7 +206,7 @@ onMounted(async () => {
           const executors = assignWorkers.length > 0
               ? assignWorkers.map(ex => ({
                 employee_id: ex.employee_id ?? '',
-                actual_minutes: ex.actual_minutes ?? 0,
+                actual_minutes: ex.actual_minutes ? parseFloat(ex.actual_minutes.toFixed(1)) : 0,
                 actual_value: ex.actual_value ? parseFloat(ex.actual_value.toFixed(3)) : 0
               }))
               : [{
@@ -229,8 +229,8 @@ onMounted(async () => {
     const subs = processedItems.filter(i => i?.part_type === 'sub');
 
 
-    console.log("MAIN", main);
-    console.log("SUB", subs);
+    //console.log("MAIN", main);
+    //console.log("SUB", subs);
 
     // ✅ Только теперь заполняем assembly.value
     assembly.value = { main, subs };
@@ -400,6 +400,8 @@ const saveExecutors = async () => {
     ready_date: dateAccounting.value,
   };
 
+  //console.log("PAYYYLOAD", payload)
+
   const errors = [];
 
   for (const item of allItems.value) {
@@ -423,6 +425,8 @@ const saveExecutors = async () => {
             actual_value: exec.actual_value || op.value,
             notes: ''
           });
+
+          //console.log("PAYYYLOD!!!", payload);
         }
       }
     }
@@ -439,7 +443,7 @@ const saveExecutors = async () => {
     return;
   }
 
-  //console.log("PAYYY", payload);
+  //console.log("PAYYY33333", payload);
 
   try {
     const res = await fetch('/api/workers', {
@@ -450,7 +454,7 @@ const saveExecutors = async () => {
 
     if (res.ok) {
       //alert('Все исполнители назначены');
-      router.push('/norm/orders');
+      //router.push('/norm/orders');
     }
   } catch (err) {
     console.error('Ошибка отправки:', err);

@@ -7,6 +7,7 @@ import NormOrdersList from "@/components/NormOrdersList.vue";
 import EditNormOrder from "@/components/EditNormOrder.vue";
 import AssignWorkers from "@/components/AssignWorkers.vue";
 import FinalNormOrdersList from "@/components/FinalNormOrdersList.vue";
+import NashchelnikCalculator from "@/components/NashchelnikCalculator.vue";
 //admin
 import AdminPanel from "@/components/admin/AdminPanel.vue";
 import AdminTemplates from '@/components/admin/AdminTemplates.vue'
@@ -24,6 +25,7 @@ const routes = [
     {path: "/norm/orders/order-norm/edit/:id", name: "EditNormOrder", component: EditNormOrder},
     {path: "/norm/workers/:id", name: "AssignWorkers", component: AssignWorkers},
     {path: "/final/orders", name: "FinalNormOrdersList", component: FinalNormOrdersList},
+    {path: "/norm/calc-nasheln", name: "NashchelnikCalculator", component: NashchelnikCalculator},
 
     //админка
     // Маршрут админки с вложенными дочерними маршрутами
