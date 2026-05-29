@@ -64,7 +64,35 @@ const totalHours = computed(() => {
 const saveAndProceed = async () => {
   loading.value = true;
 
-  // 🔹 ЛОГИРУЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ
+  // 1. Собираем все операции в один массив
+  const operationsToSend = [
+    // Старые операции (Резка, Упаковка и т.д.)
+    ...existingOps.value.map(op => ({
+      operation_name: op.operation_name,
+      operation_label: op.operation_name,
+      count: op.count,
+      value: parseFloat(op.value.toFixed(3)),
+      minutes: parseFloat(op.minutes.toFixed(1))
+    })),
+    // Новая операция: Гиб
+    {
+      operation_name: 'gib_nashchelnika',
+      operation_label: 'Гиб',
+      count: gibCount.value,
+      value: parseFloat(calcGibHours.value.toFixed(3)),
+      minutes: parseFloat((calcGibHours.value * 60).toFixed(1))
+    },
+    // Новая операция: Отбортовка
+    {
+      operation_name: 'otbortovka_nashchelnika',
+      operation_label: 'Отбортовка',
+      count: edgeCount.value,
+      value: parseFloat(calcEdgeHours.value.toFixed(3)),
+      minutes: parseFloat((calcEdgeHours.value * 60).toFixed(1))
+    }
+  ];
+
+  // 2. Формируем payload
   const payload = {
     legacy_id: Number(legacyId.value),
     order_num: orderNum.value,
@@ -72,8 +100,9 @@ const saveAndProceed = async () => {
     b: parseFloat(form.value.b),
     c: parseFloat(form.value.c),
     d: parseFloat(form.value.d),
-    count: parseFloat(count.value), // Обрати внимание: count.value, а не просто count
-    sqr: parseFloat(sqr.value)      // Обрати внимание: sqr.value
+    count: parseFloat(count.value || 0),
+    sqr: parseFloat(sqr.value || 0),
+    operations: operationsToSend // 🔥 Отправляем готовые операции
   };
 
   console.log('Отправляем на бэкэнд:', payload);
@@ -85,22 +114,19 @@ const saveAndProceed = async () => {
       body: JSON.stringify(payload)
     });
 
-
-    if (!res.ok) throw new Error('Ошибка сохранения');
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Ошибка сервера: ${res.status} ${errText}`);
+    }
 
     savedResult.value = await res.json();
     saved.value = true;
-    router.push('/norm/orders')
-    // Опционально: авто-редирект через 2 секунды
-    // setTimeout(() => {
-    //   router.push({
-    //     name: 'AssignWorkers',
-    //     params: { id: savedResult.value.id },
-    //     query: { source: 'vodootliv' }
-    //   });
-    // }, 2000);
+
+    // Перенаправление
+    router.push('/norm/orders');
 
   } catch (e) {
+    console.error(e);
     alert('Ошибка: ' + e.message);
   } finally {
     loading.value = false;
@@ -152,7 +178,6 @@ const printPage = () => {
       <button @click="goBack" class="btn-back">← Назад</button>
       <h2>Нащельники: {{ orderNum }}</h2>
       <span class="customer">Заказчик: {{ customer }}</span>
-      <button @click="printPage" class="btn-print">🖨 Печать</button>
     </div>
 
     <!-- Ввод параметров -->
@@ -276,8 +301,9 @@ const printPage = () => {
 
     <!-- Кнопки действий -->
     <div class="actions no-print">
+      <button @click="printPage" class="btn-print">Печать</button>
       <button @click="saveAndProceed" :disabled="loading || saved" class="btn-save">
-        {{ loading ? 'Сохранение...' : saved ? '✅ Сохранено! Переход...' : '💾 Сохранить и назначить' }}
+        {{ loading ? 'Сохранение...' : saved ? 'Сохранено! Переход...' : 'Сохранить' }}
       </button>
       <span v-if="saved" class="hint">Переход к назначению сотрудников...</span>
     </div>
@@ -289,8 +315,7 @@ const printPage = () => {
 .page-container { max-width: 700px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
 .header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
 .customer { margin-left: auto; color: #666; font-size: 14px; }
-.btn-back, .btn-print { padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; }
-.btn-print { background: #10b981; color: white; border: none; }
+
 
 .input-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -303,11 +328,13 @@ const printPage = () => {
 .minutes { color: #64748b; font-weight: normal; font-size: 13px; }
 
 .actions { display: flex; align-items: center; gap: 15px; margin-top: 20px; }
-.btn-save {
+.btn-save, btn-print {
   padding: 12px 24px; background: #2563eb; color: white; border: none;
   border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: 500;
 }
-.btn-save:disabled { opacity: 0.7; cursor: not-allowed; }
+.btn-back { padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; }
+
+.btn-save:disabled, btn-print:disabled { opacity: 0.7; cursor: not-allowed; }
 .hint { color: #10b981; font-size: 14px; }
 
 .ops-table {
