@@ -22,6 +22,7 @@ const savedResult = ref(null);
 const sqr = ref(0);
 const pgm = ref(0);
 const count = ref(0);
+const calcRezHours = ref(0);
 
 // --- ЗАГРУЗКА ДАННЫХ ПРИ ОТКРЫТИИ ---
 onMounted(async () => {
@@ -30,12 +31,13 @@ onMounted(async () => {
     if (!res.ok) throw new Error('Не удалось загрузить данные');
 
     const data = await res.json();
-    console.log(data)
+    //console.log("DATTATAA", data);
     customer.value = data.customer;
     sqr.value = data.sqr || 0;
-    pgm.value = data.pgm || 0;
-    count.value = data.count || 0,
+    pgm.value = data.pgm ? data.pgm / 1000 : 0;
+    count.value = data.count || 0;
     existingOps.value = data.existing_ops || [];
+    calcRezHours.value = pgm.value + ((sqr.value / pgm.value) * data.count);
   } catch (e) {
     console.error(e);
     alert('Ошибка загрузки данных заказа');
@@ -102,7 +104,7 @@ const saveAndProceed = async () => {
     d: parseFloat(form.value.d),
     count: parseFloat(count.value || 0),
     sqr: parseFloat(sqr.value || 0),
-    operations: operationsToSend // 🔥 Отправляем готовые операции
+    operations: operationsToSend
   };
 
   console.log('Отправляем на бэкэнд:', payload);
@@ -133,8 +135,46 @@ const saveAndProceed = async () => {
   }
 };
 
+const operationNorms = {
+  'Резка': '56 сек за 1м',
+  'Разметка': '33 сек за 1шт',
+  'Гиб': '38,25 сек до 1,3 м | 42,5 сек от 1,3 м',
+  'Отбортовка': '19,125 сек до 1,3 м | 21,25 сек от 1,3 м',
+  'Упаковка': '3 мин на 1 уп(10шт)',
+  // ... добавишь остальные, когда ПДО дадут данные
+};
+
+function getNormDescription(opName) {
+  //console.log("NAME", opName)
+  return operationNorms[opName] || '—';
+}
+
+
 //const printPage = () => window.print();
 const goBack = () => router.back();
+
+
+import VitrageCalculator from './VitrageCalculator.vue';
+const showCalculator = ref(false);
+const calculatorTargetField = ref(null); // 'a', 'b', 'c' или 'd'
+
+function openCalculatorFor(fieldName) {
+  //console.log('🧮 Открываем калькулятор для поля:', fieldName);
+  calculatorTargetField.value = fieldName;
+  showCalculator.value = true;
+}
+
+// Обработчик применения результата из калькулятора
+function handleCalculatorApply(value) {
+  //console.log('📥 Получен результат:', value, 'для поля:', calculatorTargetField.value);
+
+  if (calculatorTargetField.value && calculatorTargetField.value in form.value) {
+    form.value[calculatorTargetField.value] = value;
+    //console.log('✅ Поле', calculatorTargetField.value, 'обновлено:', value);
+  }
+
+  calculatorTargetField.value = null;
+}
 
 const printPage = () => {
   const printContents = document.getElementById('printable').innerHTML
@@ -148,11 +188,13 @@ const printPage = () => {
           table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 15px;
+            text-align: center;
           }
 
           th, td {
             border: 1px solid black;
-            padding: 8px;
+            padding: 2px;
           }
         </style>
       </head>
@@ -187,18 +229,50 @@ const printPage = () => {
         <div class="field">
           <label>A. Гиб (до 1300мм)</label>
           <input type="number" v-model.number="form.a" min="0" />
+          <button
+              type="button"
+              @click="openCalculatorFor('a')"
+              class="calc-trigger-btn"
+              title="Рассчитать по формуле"
+          >
+            🧮
+          </button>
         </div>
         <div class="field">
           <label>B. Гиб (больше 1300мм)</label>
           <input type="number" v-model.number="form.b" min="0" />
+          <button
+              type="button"
+              @click="openCalculatorFor('b')"
+              class="calc-trigger-btn"
+              title="Рассчитать по формуле"
+          >
+            🧮
+          </button>
         </div>
         <div class="field">
           <label>C. Отбортовка (до 1300мм)</label>
           <input type="number" v-model.number="form.c" min="0" />
+          <button
+              type="button"
+              @click="openCalculatorFor('c')"
+              class="calc-trigger-btn"
+              title="Рассчитать по формуле"
+          >
+            🧮
+          </button>
         </div>
         <div class="field">
           <label>D. Отбортовка (больше 1300мм)</label>
           <input type="number" v-model.number="form.d" min="0" />
+          <button
+              type="button"
+              @click="openCalculatorFor('d')"
+              class="calc-trigger-btn"
+              title="Рассчитать по формуле"
+          >
+            🧮
+          </button>
         </div>
       </div>
     </div>
@@ -211,37 +285,56 @@ const printPage = () => {
           <thead>
           <tr>
             <th>Операция</th>
-            <th>Площадь</th>
+            <th>Норма на единицу</th>
             <th>Кол-во</th>
-            <th>Н/час</th>
+            <th>Площадь</th>
             <th>М/п</th>
+            <th>Длина реза</th>
+            <th>Н/мин</th>
+            <th>Н/час</th>
           </tr>
           </thead>
           <tbody>
           <tr v-for="op in existingOps" :key="op.name">
             <td>{{ op.operation_label }}</td>
-            <td></td>
+            <td>{{ getNormDescription(op.operation_label) }}</td>
             <td>{{ op.count }}</td>
+            <td></td>
+            <td></td>
+            <td v-if="op.operation_label === 'Резка'">{{ calcRezHours.toFixed(2) }}</td>
+            <td v-else></td>
+            <td>{{ (op.value * 60).toFixed(1) }}</td>
             <td>{{ op.value?.toFixed(3) }}</td>
           </tr>
           <tr>
             <td>Гиб</td>
-            <td></td>
+            <td>{{ getNormDescription('Гиб') }}</td>
             <td>{{ gibCount }}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>{{ (calcGibHours * 60).toFixed(1) }}</td>
             <td>{{ calcGibHours.toFixed(3) }}</td>
           </tr>
           <tr>
             <td>Отбортовка</td>
-            <td></td>
+            <td>{{ getNormDescription('Отбортовка') }}</td>
             <td>{{ edgeCount }}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>{{ (calcEdgeHours * 60).toFixed(1) }}</td>
             <td>{{ calcEdgeHours.toFixed(3) }}</td>
           </tr>
            <tr>
-             <td>Итого</td>
-             <td>{{ sqr }}</td>
-             <td>{{ count }}</td>
-             <td>{{totalHours.toFixed(3)}}</td>
-             <td>{{ pgm }}</td>
+             <td><strong>Итого</strong></td>
+             <td></td>
+             <td><strong>{{ count }}</strong></td>
+             <td><strong>{{sqr}}</strong></td>
+             <td><strong>{{ pgm }}</strong></td>
+             <td><strong>{{ calcRezHours.toFixed(2) }}</strong></td>
+             <td><strong>{{(totalHours * 60).toFixed(1)}}</strong></td>
+             <td><strong>{{totalHours.toFixed(3)}}</strong></td>
            </tr>
           </tbody>
         </table>
@@ -262,37 +355,56 @@ const printPage = () => {
           <thead>
           <tr>
             <th>Операция</th>
-            <th>Площадь</th>
+            <th>Норма на единицу</th>
             <th>Кол-во</th>
-            <th>Н/час</th>
+            <th>Площадь</th>
             <th>М/п</th>
+            <th>Длина реза</th>
+            <th>Н/мин</th>
+            <th>Н/час</th>
           </tr>
           </thead>
           <tbody>
           <tr v-for="op in existingOps" :key="op.name">
             <td>{{ op.operation_label }}</td>
-            <td></td>
+            <td>{{ getNormDescription(op.operation_label) }}</td>
             <td>{{ op.count }}</td>
+            <td></td>
+            <td></td>
+            <td v-if="op.operation_label === 'Резка'">{{ calcRezHours.toFixed(2) }}</td>
+            <td v-else></td>
+            <td>{{ (op.value * 60).toFixed(1) }}</td>
             <td>{{ op.value?.toFixed(3) }}</td>
           </tr>
           <tr>
             <td>Гиб</td>
-            <td></td>
+            <td>{{ getNormDescription('Гиб') }}</td>
             <td>{{ gibCount }}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>{{ (calcGibHours * 60).toFixed(1) }}</td>
             <td>{{ calcGibHours.toFixed(3) }}</td>
           </tr>
           <tr>
             <td>Отбортовка</td>
-            <td></td>
+            <td>{{ getNormDescription('Отбортовка') }}</td>
             <td>{{ edgeCount }}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>{{ (calcEdgeHours * 60).toFixed(1) }}</td>
             <td>{{ calcEdgeHours.toFixed(3) }}</td>
           </tr>
           <tr>
-            <td>Итого</td>
-            <td>{{ sqr }}</td>
-            <td>{{count}}</td>
-            <td>{{totalHours.toFixed(3)}}</td>
-            <td>{{ pgm }}</td>
+            <td><strong>Итого</strong></td>
+            <td></td>
+            <td><strong>{{ count }}</strong></td>
+            <td><strong>{{sqr}}</strong></td>
+            <td><strong>{{ pgm }}</strong></td>
+            <td><strong>{{ calcRezHours.toFixed(2) }}</strong></td>
+            <td><strong>{{(totalHours * 60).toFixed(1)}}</strong></td>
+            <td><strong>{{totalHours.toFixed(3)}}</strong></td>
           </tr>
           </tbody>
         </table>
@@ -308,6 +420,10 @@ const printPage = () => {
       <span v-if="saved" class="hint">Переход к назначению сотрудников...</span>
     </div>
   </div>
+  <VitrageCalculator
+      v-model:isOpen="showCalculator"
+      @apply="handleCalculatorApply"
+  />
 </template>
 
 <style scoped>
@@ -334,7 +450,7 @@ const printPage = () => {
 }
 .btn-back { padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; }
 
-.btn-save:disabled, btn-print:disabled { opacity: 0.7; cursor: not-allowed; }
+.btn-save:disabled { opacity: 0.7; cursor: not-allowed; }
 .hint { color: #10b981; font-size: 14px; }
 
 .ops-table {
@@ -342,17 +458,23 @@ const printPage = () => {
   border-collapse: collapse;
   font-size: 12px;
   margin-top: 10px;
+  text-align: center;
 }
 
 .ops-table th,
 .ops-table td {
   padding: 8px 10px;
-  text-align: left;
   border: 1px solid black;
+  text-align: center;
 }
 
 .no-screen {
   display: none;
+}
+
+.single-mode-summary td:last-child {
+  font-weight: 500;
+  color: #28a745;
 }
 </style>
 

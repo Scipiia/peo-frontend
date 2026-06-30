@@ -154,6 +154,16 @@
                 :disabled="item.group === 'ign'"
                 @input="updateCount(index, $event.target.value)"
             />
+            <!-- КНОПКА КАЛЬКУЛЯТОРА -->
+            <button
+                v-if="isVitrage && item.show_calc"
+                type="button"
+                @click="openCalculatorFor(index, 'count')"
+                class="calc-trigger-btn"
+                title="Рассчитать по формуле"
+            >
+              🧮
+            </button>
           </td>
           <td class="text-center">{{ item.minutes }}</td>
         </tr>
@@ -267,17 +277,64 @@
         <button @click="saveNormirovka" :disabled="loading" class="btn-save">
           {{ loading ? 'Сохраняем...' : 'Сохранить нормировку' }}
         </button>
+
+        <!-- Кнопка просто меняет переменную на true -->
+<!--        <button @click="showCalculator = true" class="calculator-btn">-->
+<!--          🧮 Калькулятор формул-->
+<!--        </button>-->
+
+        <!-- Передаем переменную через v-model:isOpen -->
+        <!-- Сам калькулятор в самом низу компонента -->
       </div>
     </div>
   </div>
+  <VitrageCalculator
+      v-model:isOpen="showCalculator"
+      @apply="handleCalculatorApply"
+  />
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";
+import VitrageCalculator from './VitrageCalculator.vue'; // ← ДОБАВЬ ЭТУ СТРОКУ
 
 const route = useRoute();
+
+const isVitrage= computed(() => {
+  // Проверяем тип текущей формы (приведи к нижнему регистру для надежности)
+  const type = fullForm.value?.type?.toLowerCase() || '';
+  return type.includes('vitrage');
+});
+
+//import { ref } from 'vue';
+const showCalculator = ref(false);
+const calcTarget = ref(null);
+
+function openCalculatorFor(index, field) {
+  //console.log('🧮 Кнопка нажата! Index:', index, 'Field:', field);
+  calcTarget.value = { index, field };
+  showCalculator.value = true;
+  //console.log('📊 showCalculator:', showCalculator.value);
+  //console.log('🎯 calcTarget:', calcTarget.value);
+}
+
+// Функция, которую вызовет калькулятор при нажатии "Вставить в поле"
+function handleCalculatorApply(value) {
+  if (!calcTarget.value || !fullForm.value?.operations) return;
+
+  const { index, field } = calcTarget.value;
+  // УДАЛИЛИ: const op = fullForm.value.operations[index];
+
+  if (field === 'count') {
+    updateCount(index, value.toString());
+  } else if (field === 'dynamicValue') {
+    updateValue(index, value.toString());
+  }
+
+  calcTarget.value = null;
+}
 
 // --- Ключ для sessionStorage ---
 const storageKey = `orderDetail_${route.params.orderNum}_${route.params.position}`;
@@ -452,6 +509,24 @@ const totalMinutes = computed(() => {
 
 // --- Пересчёт нормы при изменении количества ---
 // Обновление поля Value вручную
+// function updateValue(index, newValueStr) {
+//   const newValue = parseFloat(newValueStr);
+//   if (isNaN(newValue)) return;
+//
+//   const item = fullForm.value.operations[index];
+//   item.dynamicValue = newValue;
+//
+//   // Обновляем rate: сколько стоит одна единица
+//   if (item.count > 0) {
+//     item.rate = newValue / item.count;
+//   } else {
+//     // Если count = 0, можно оставить предыдущий rate или установить в newValue
+//     item.rate = newValue; // или 0 — зависит от вашей логики
+//   }
+//
+//   item.minutes = Number(item.dynamicValue * 60).toFixed(1);
+// }
+
 function updateValue(index, newValueStr) {
   const newValue = parseFloat(newValueStr);
   if (isNaN(newValue)) return;
@@ -459,33 +534,83 @@ function updateValue(index, newValueStr) {
   const item = fullForm.value.operations[index];
   item.dynamicValue = newValue;
 
-  // Обновляем rate: сколько стоит одна единица
-  if (item.count > 0) {
-    item.rate = newValue / item.count;
-  } else {
-    // Если count = 0, можно оставить предыдущий rate или установить в newValue
-    item.rate = newValue; // или 0 — зависит от вашей логики
-  }
+  // Переводим введенные часы обратно в минуты
+  const totalMinutes = newValue * 60;
+  item.minutes = parseFloat(totalMinutes.toFixed(2));
 
-  item.minutes = Number(item.dynamicValue * 60).toFixed(1);
+  // Обновляем rateMinutes (минуты на 1 ед.), если количество > 0
+  if (item.count > 0) {
+    item.rateMinutes = parseFloat((totalMinutes / item.count).toFixed(3));
+  }
 }
 
+// function updateCount(index, newCountStr) {
+//   const newCount = parseFloat(newCountStr);
+//   if (isNaN(newCount)) return;
+//
+//   const item = fullForm.value.operations[index];
+//
+//   // Устанавливаем count для этой операции
+//   item.count = newCount;
+//
+//   // ← ДОБАВЛЯЕМ: Если у операции есть формула, помечаем как ручной ввод
+//   if (item.formula) {
+//     item.manualOverride = true;
+//     console.log(`🔧 Ручной ввод для ${item.label}: count = ${newCount}, формула отключена`);
+//   }
+//
+//   // Определяем группу
+//   const group = item.group;
+//
+//   // Если у операции нет группы — только она одна обновляется
+//   if (!group) {
+//     item.dynamicValue = newCount * item.rate;
+//     item.minutes = parseFloat((item.dynamicValue * 60).toFixed(1));
+//     // --- НОВАЯ ПРОСТАЯ ЛОГИКА ---
+//     //console.log("🔄 Запускаем пересчет всех формул...");
+//     testSimpleRecalculation();
+//     return;
+//   }
+//
+//   // Находим все операции в этой группе
+//   const operationsInGroup = fullForm.value.operations.filter(op => op.group === group);
+//
+//   // Обновляем ВСЕ операции в группе
+//   operationsInGroup.forEach(op => {
+//     op.count = newCount; // одинаковое количество
+//     op.dynamicValue = newCount * op.rate;
+//     op.minutes = parseFloat((op.dynamicValue * 60).toFixed(1));
+//   });
+//
+//   // --- НОВАЯ ПРОСТАЯ ЛОГИКА ---
+//   //console.log("🔄 Запускаем пересчет всех формул...");
+//   testSimpleRecalculation();
+// }
 function updateCount(index, newCountStr) {
   const newCount = parseFloat(newCountStr);
   if (isNaN(newCount)) return;
 
   const item = fullForm.value.operations[index];
-
-  // Устанавливаем count для этой операции
   item.count = newCount;
+
+  // Если у операции есть формула, помечаем как ручной ввод
+  if (item.formula) {
+    item.manualOverride = true;
+    //console.log(`🔧 Ручной ввод для ${item.label}: count = ${newCount}, формула отключена`);
+  }
 
   // Определяем группу
   const group = item.group;
 
   // Если у операции нет группы — только она одна обновляется
   if (!group) {
-    item.dynamicValue = newCount * item.rate;
-    item.minutes = parseFloat((item.dynamicValue * 60).toFixed(1));
+    // Считаем от rateMinutes (минуты на 1 ед.)
+    const totalMinutes = item.count * item.rateMinutes;
+    item.minutes = parseFloat(totalMinutes.toFixed(2));
+    item.dynamicValue = parseFloat((totalMinutes / 60).toFixed(4));
+
+    // Запускаем пересчет формул
+    testSimpleRecalculation();
     return;
   }
 
@@ -494,11 +619,43 @@ function updateCount(index, newCountStr) {
 
   // Обновляем ВСЕ операции в группе
   operationsInGroup.forEach(op => {
-    op.count = newCount; // одинаковое количество
-    op.dynamicValue = newCount * op.rate;
-    op.minutes = parseFloat((op.dynamicValue * 60).toFixed(1));
+    op.count = newCount;
+    const grpTotalMins = op.count * op.rateMinutes;
+    op.minutes = parseFloat(grpTotalMins.toFixed(2));
+    op.dynamicValue = parseFloat((grpTotalMins / 60).toFixed(4));
   });
+
+  // Запускаем пересчет формул
+  testSimpleRecalculation();
 }
+
+
+// function multiplyAllCounts() {
+//   const multiplier = parseInt(cardInfo.value?.count) || 1;
+//
+//   if (!fullForm.value?.operations) return;
+//
+//   fullForm.value.operations.forEach(op => {
+//
+//     if (op.group && ['ign'].includes(op.group)) {
+//       // Можно явно установить 1, если нужно
+//       op.count = 1;
+//       return;
+//     }
+//
+//     // Сохраняем текущий count до умножения
+//     const oldCount = op.count;
+//
+//     // Умножаем count
+//     op.count = oldCount * multiplier;
+//
+//     // Пересчитываем dynamicValue и minutes
+//     op.dynamicValue = op.count * op.rate;
+//     op.minutes = parseFloat((op.dynamicValue * 60).toFixed(1));
+//   });
+//
+//   //console.log(`Все количества умножены на ${multiplier}`);
+// }
 
 function multiplyAllCounts() {
   const multiplier = parseInt(cardInfo.value?.count) || 1;
@@ -506,25 +663,19 @@ function multiplyAllCounts() {
   if (!fullForm.value?.operations) return;
 
   fullForm.value.operations.forEach(op => {
-
     if (op.group && ['ign'].includes(op.group)) {
-      // Можно явно установить 1, если нужно
       op.count = 1;
       return;
     }
 
-    // Сохраняем текущий count до умножения
-    const oldCount = op.count;
+    // Умножаем количество
+    op.count = op.count * multiplier;
 
-    // Умножаем count
-    op.count = oldCount * multiplier;
-
-    // Пересчитываем dynamicValue и minutes
-    op.dynamicValue = op.count * op.rate;
-    op.minutes = parseFloat((op.dynamicValue * 60).toFixed(1));
+    // Пересчитываем от rateMinutes
+    const totalMins = op.count * op.rateMinutes;
+    op.minutes = parseFloat(totalMins.toFixed(2));
+    op.dynamicValue = parseFloat((totalMins / 60).toFixed(4));
   });
-
-  //console.log(`Все количества умножены на ${multiplier}`);
 }
 
 // --- Загрузка формы по шаблону ---
@@ -550,13 +701,35 @@ async function loadForm(tpl) {
       fullForm.value.parent_product_id = null;
     }
 
-    fullForm.value.operations = fullForm.value.operations.map(op => ({
-      ...op,
-      count: op.count ?? 0,
-      baseValue: op.value ?? 0,
-      rate: op.value ?? 0,
-      dynamicValue: (op.count ?? 0) * (op.value ?? 0) // начальное значение
-    }));
+    // const rateMinutes = op.minutes ?? (op.value * 60);
+    //
+    // fullForm.value.operations = fullForm.value.operations.map(op => ({
+    //   ...op,
+    //   count: op.count ?? 0,
+    //   baseValue: op.value ?? 0,
+    //   rate: op.value ?? 0,
+    //   dynamicValue: (op.count ?? 0) * (op.value ?? 0), // начальное значение
+    //   manualOverride: false,
+    // }));
+
+    fullForm.value.operations = fullForm.value.operations.map(op => {
+      // ИСТОЧНИК ИСТИНЫ: минуты на 1 единицу (из JSON)
+      const rateMinutes = op.minutes ?? (op.value * 60);
+
+      return {
+        ...op,
+        count: op.count ?? 0,
+        baseValue: op.value ?? 0,
+        rateMinutes: parseFloat(rateMinutes.toFixed(3)), // Минуты на 1 ед. (например, 0.5)
+        rate: parseFloat((rateMinutes / 60).toFixed(3)), // Часы на 1 ед. (вычисляем из минут)
+        dynamicValue: parseFloat(((op.count ?? 0) * (rateMinutes / 60)).toFixed(3)), // Часы
+        minutes: parseFloat(((op.count ?? 0) * rateMinutes).toFixed(2)), // Всего минут
+        manualOverride: false,
+      };
+    });
+
+    // <-- ДОБАВЬ ЭТУ СТРОКУ:
+    //recalculateAllFormulas();
 
     const operationsByGroup = {};
     fullForm.value.operations.forEach(op => {
@@ -833,16 +1006,79 @@ const customOperationsToSend = computed(() => {
       });
 });
 
-// Вынесите логику очистки в отдельную функцию для удобства
-// const resetCustomOperations = () => {
-//   // Сбрасываем к состоянию "одна пустая строка", как у вас было изначально
-//   customInputs.value = [{ name: '', minutes: 0, count: 1 }];
-//
-//   // Опционально: если есть другие связанные состояния, их тоже можно сбросить здесь
-//   // console.log('Дополнительные операции очищены');
-// };
+//TODO калькуляция для витражей
 
-// TODO конец костыля
+function testSimpleRecalculation() {
+  if (!fullForm.value || !fullForm.value.operations) return;
+
+  // Делаем несколько проходов, пока все формулы не будут вычислены
+  let maxIterations = 10;
+  let hasChanges = true;
+
+  while (hasChanges && maxIterations > 0) {
+    hasChanges = false;
+    maxIterations--;
+
+    fullForm.value.operations.forEach(op => {
+      // ← ДОБАВЛЯЕМ: Если пользователь переопределил вручную, пропускаем
+      if (op.manualOverride) return;
+
+      if (op.formula && op.depends_on && op.depends_on.length > 0) {
+
+        const variables = {};
+        let allDepsReady = true;
+
+        // Проверяем, готовы ли все зависимости
+        op.depends_on.forEach(depName => {
+          const depOp = fullForm.value.operations.find(item => item.name === depName);
+          if (depOp && depOp.count !== undefined && depOp.count !== null && !isNaN(depOp.count)) {
+            variables[depName] = depOp.count;
+          } else {
+            allDepsReady = false;
+          }
+        });
+
+        // Если не все зависимости готовы, пропускаем (попробуем в следующем проходе)
+        if (!allDepsReady) return;
+
+        let expression = op.formula;
+
+        // Заменяем имена операций на их значения
+        Object.keys(variables).forEach(varName => {
+          const regex = new RegExp(`\\b${varName}\\b`, 'g');
+          expression = expression.replace(regex, variables[varName]);
+        });
+
+        // Поддержка математических функций
+        expression = expression.replace(/\bceil\b/g, 'Math.ceil');
+        expression = expression.replace(/\bfloor\b/g, 'Math.floor');
+        expression = expression.replace(/\bround\b/g, 'Math.round');
+
+        try {
+          const newCount = new Function('return ' + expression)();
+
+          if (typeof newCount === 'number' && !isNaN(newCount)) {
+            // Проверяем, изменилось ли значение
+            if (op.count !== newCount) {
+              op.count = newCount;
+
+              // Пересчитываем от rateMinutes
+              const totalMins = op.count * op.rateMinutes;
+              op.minutes = parseFloat(totalMins.toFixed(2));
+              op.dynamicValue = parseFloat((totalMins / 60).toFixed(4));
+
+              hasChanges = true; // Были изменения, нужен еще один проход
+              //console.log(`✅ [Формула] ${op.label}: "${op.formula}" -> "${expression}" = ${newCount}`);
+            }
+          }
+        } catch (e) {
+          //console.warn(`⚠️ [Формула] Ошибка в ${op.name}:`, e.message, "| Выражение:", expression);
+        }
+      }
+    });
+  }
+}
+// TODO end
 
 </script>
 

@@ -42,7 +42,35 @@
           {{ item.total_time.toFixed(3) }} ч ({{ Math.round(item.total_time * 60) }} мин)
       </div>
 
-      <table class="executors-table">
+      <!-- Переключатель режима назначения -->
+      <div class="mode-switch" style="margin-bottom: 20px; padding: 10px; background: #f0f7ff; border-radius: 6px;">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500;">
+          <input type="checkbox" v-model="applyToAll" style="width: 18px; height: 18px;" />
+          <span>👤 Один сотрудник на все операции</span>
+        </label>
+
+        <!-- Если включен режим "одного сотрудника" — показываем выбор -->
+        <div v-if="applyToAll" style="margin-top: 10px; padding-left: 28px;">
+          <select v-model="selectedEmployeeId" class="select-employee" style="width: 300px;">
+            <option value="">— Выберите исполнителя —</option>
+            <option
+                v-for="emp in getAllAvailableEmployees()"
+                :key="emp.id"
+                :value="emp.id"
+            >
+              {{ emp.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div v-if="isVitrage" class="vitrage-notice">
+        <div class="notice-content">
+          <button @click="goToVitrageAssign" class="btn-vitrage">Назначение для витражей</button>
+        </div>
+      </div>
+
+      <table v-if="!applyToAll" class="executors-table">
         <thead>
         <tr>
           <th>Операция</th>
@@ -121,6 +149,33 @@
         </tr>
         </tbody>
       </table>
+
+      <div v-else class="single-mode-summary">
+        <p style="margin: 10px 0; color: #666;">
+          Выбранному сотруднику будут назначены <strong>все операции</strong> на {{ totalAssemblyTime.toFixed(3) }} ч.
+        </p>
+        <table class="executors-table">
+          <thead>
+          <tr>
+            <th>Операция</th>
+            <th>Норма (мин)</th>
+            <th>Норма (ч)</th>
+            <th>Исполнитель</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="op in getAllOperationsFlat()" :key="op.key">
+            <td>{{ op.label }}</td>
+            <td class="text-center">{{ op.minutes.toFixed(1) }}</td>
+            <td class="text-center">{{ op.value.toFixed(3) }}</td>
+            <td style="color: #28a745; font-weight: 500;">
+              {{ getEmployeeNameById(selectedEmployeeId) }}
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
 
     <!-- Кнопки -->
@@ -152,6 +207,87 @@ const loading = ref(false);
 const dateAccounting = ref('');
 const employeesByType = ref({});
 const employeesLoading = ref({});
+
+const applyToAll = ref(false); // По умолчанию включено — это ускорит работу ПЭО
+const selectedEmployeeId = ref('');
+
+// TODO для витражей
+const isVitrage = computed(() => {
+  // Проверяем тип из загруженных данных
+  if (assembly.value?.main?.type === 'vitrage') return true;
+
+  // Fallback: проверяем через route (если данные ещё не загрузились)
+  return route.query.source === 'vitrage' ||
+      route.query.type === 'vitrage' ||
+      route.params.type === 'vitrage';
+});
+
+function goToVitrageAssign() {
+  if (!assembly.value?.main) {
+    console.warn('Нет данных сборки для перехода');
+    return;
+  }
+
+  const main = assembly.value.main;
+
+  router.push({
+    name: "AssignWorkersVitrage",
+    params: { id: route.params.id },
+    query: {
+      source: main.type || 'vitrage',
+      order_num: main.order_num,
+      time: main.total_time,
+      count: main.count,
+      // Можно добавить ещё параметры, если нужно
+    }
+  });
+}
+
+// --- Хелперы для режима "Один сотрудник" ---
+
+// Собираем все операции из всех изделий в один плоский список (для превью)
+const getAllOperationsFlat = () => {
+  const result = [];
+  for (const item of allItems.value) {
+    for (const op of item.operations) {
+      result.push({
+        key: `${item.id}_${op.operation_name}`,
+        label: op.operation_label,
+        minutes: op.minutes,
+        value: op.value
+      });
+    }
+  }
+  return result;
+};
+
+const getAllAvailableEmployees = () => {
+  const allEmps = [];
+  const seenIds = new Set();
+
+  for (const item of allItems.value) {
+    const emps = getEmployeesForType(item.type);
+    for (const emp of emps) {
+      if (!seenIds.has(emp.id)) {
+        seenIds.add(emp.id);
+        allEmps.push(emp);
+      }
+    }
+  }
+  return allEmps;
+};
+
+// Получаем имя сотрудника по ID для отображения в превью
+const getEmployeeNameById = (id) => {
+  if (!id) return '— не выбран —';
+  for (const item of allItems.value) {
+    const emp = getEmployeesForType(item.type).find(e => e.id == id);
+    if (emp) return emp.name;
+  }
+  return 'Сотрудник';
+};
+
+
 
 const isExecutorSelected = (executors, empId, currentExecutor) => {
   return executors.some(ex =>
@@ -280,7 +416,6 @@ const loadEmployeesForType = async (type) => {
   //console.log(`Загрузка сотрудников для типа: "${type}" (typeof: ${typeof type})`);
 
   try {
-    // 👈 Ключевое изменение: передаём type в запрос
     const res = await fetch(`/api/workers/all?type=${type}`);
     //console.log(`🌐 Запрос: ${res}`);
 
@@ -332,7 +467,8 @@ const getTypeLabel = (type) => {
     door: 'Дверь',
     loggia: 'Лоджия',
     vitrage: 'Витраж',
-    mosquito: 'Москитка'
+    mosquito: 'Москитка',
+    vodootliv: 'Водоотлив'
   };
   return labels[type] || type;
 };
@@ -400,39 +536,58 @@ const saveExecutors = async () => {
     ready_date: dateAccounting.value,
   };
 
-  //console.log("PAYYYLOAD", payload)
-
   const errors = [];
 
-  for (const item of allItems.value) {
-    for (const op of item.operations) {
+  // 🔥 РЕЖИМ "ОДИН СОТРУДНИК НА ВСЁ"
+  if (applyToAll.value) {
+    if (!selectedEmployeeId.value) {
+      alert('Пожалуйста, выберите сотрудника для назначения на все операции');
+      return;
+    }
 
-      const validExecutors = op.executors.filter(ex => ex.employee_id);
-      if (validExecutors.length === 0) {
-        errors.push(`Операция "${op.operation_label}" (${item.name}) — не назначен исполнитель`);
-        continue;
+    // Проходим по всем изделиям и операциям
+    for (const item of allItems.value) {
+      for (const op of item.operations) {
+        payload.assignments.push({
+          product_id: item.id,
+          operation_name: op.operation_name,
+          employee_id: Number(selectedEmployeeId.value),
+          actual_minutes: op.minutes,
+          actual_value: op.value,
+          notes: ''
+        });
       }
-      for (const exec of op.executors) {
-        if (!exec.employee_id) {
-          errors.push(`У операции "${op.operation_label}" (${item.name}) указан исполнитель без ФИО`);
+    }
+  }
+  // 🔥 СТАНДАРТНЫЙ РЕЖИМ (пооперационный)
+  else {
+    for (const item of allItems.value) {
+      for (const op of item.operations) {
+        const validExecutors = op.executors.filter(ex => ex.employee_id);
+        if (validExecutors.length === 0) {
+          errors.push(`Операция "${op.operation_label}" (${item.name}) — не назначен исполнитель`);
+          continue;
         }
-        if (exec.employee_id) {
-          payload.assignments.push({
-            product_id: item.id,
-            operation_name: op.operation_name,
-            employee_id: exec.employee_id,
-            actual_minutes: exec.actual_minutes || op.minutes,
-            actual_value: exec.actual_value || op.value,
-            notes: ''
-          });
-
-          //console.log("PAYYYLOD!!!", payload);
+        for (const exec of op.executors) {
+          if (!exec.employee_id) {
+            errors.push(`У операции "${op.operation_label}" (${item.name}) указан исполнитель без ФИО`);
+          }
+          if (exec.employee_id) {
+            payload.assignments.push({
+              product_id: item.id,
+              operation_name: op.operation_name,
+              employee_id: exec.employee_id,
+              actual_minutes: exec.actual_minutes || op.minutes,
+              actual_value: exec.actual_value || op.value,
+              notes: ''
+            });
+          }
         }
       }
     }
   }
 
-  // Если есть ошибки — не отправляем
+  // Валидация
   if (errors.length > 0) {
     alert('Не все операции назначены:\n\n' + errors.join('\n'));
     return;
@@ -443,8 +598,8 @@ const saveExecutors = async () => {
     return;
   }
 
-  //console.log("PAYYY33333", payload);
-
+  //console.log("asdasd", payload);
+  // Отправка
   try {
     const res = await fetch('/api/workers', {
       method: 'POST',
@@ -453,12 +608,14 @@ const saveExecutors = async () => {
     });
 
     if (res.ok) {
-      //alert('Все исполнители назначены');
-      //router.push('/norm/orders');
+      router.push('/norm/orders');
+    } else {
+      const errText = await res.text();
+      alert('Ошибка сохранения: ' + errText);
     }
   } catch (err) {
     console.error('Ошибка отправки:', err);
-    //alert('Не удалось сохранить');
+    alert('Не удалось сохранить назначения');
   }
 };
 
@@ -684,4 +841,16 @@ h3 {
   line-height: 1.2;
 }
 
+.btn-vitrage {
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);
+}
 </style>

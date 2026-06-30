@@ -51,13 +51,26 @@ const summaryData = computed(() => {
   const allDoors15p = products.filter(p => p.type === 'door' && (p.type_izd === '1.5П' || p.type_izd === '1.5Пт'));
   const allDoors2p = products.filter(p => p.type === 'door' && (p.type_izd === '2П' || p.type_izd === '2Пт'));
 
+  //loggia
   const loggias = products.filter(p => p.type === 'loggia');
+  const loggiasStv = products.filter(p => p.type === 'loggia' && p.type_izd === 'створка');
+  const loggias2Stv = products.filter(p => p.type === 'loggia' && p.type_izd === '2ств.лр');
+  const loggias3Stv = products.filter(p => p.type === 'loggia' && p.type_izd === '3ств.лр');
+  const loggias4Stv = products.filter(p => p.type === 'loggia' && p.type_izd === '4ств.лр');
+  const loggias5Stv = products.filter(p => p.type === 'loggia' && p.type_izd === '5ств.лр');
+  const loggias6Stv = products.filter(p => p.type === 'loggia' && p.type_izd === '6ств.лр');
 
-  // Исправлено: тип москиток теперь 'mosquito', а не 'ms' (согласно вашему бэкенду)
+  // ms
   const mosquitoAll = products.filter(p => p.type === 'mosquito');
   const mosquitoVsn = products.filter(p => p.type_izd === "vsn");
   const mosquitoMs = products.filter(p => p.type_izd === "ms");
-  const moscuitoMixed = products.filter(p => p.type_izd.includes('+'))
+  const moscuitoMixed = products.filter(p => p.type === 'mosquito' && p.type_izd.includes('+'))
+
+  //vo
+  const vodootlivAll = products.filter(p => p.type === 'vodootliv');
+  const vodootlivVo = products.filter(p => p.type_izd === "vo");
+  const vodootlivOcn = products.filter(p => p.type_izd === "ocn");
+  const vodootlivMixed = products.filter(p => p.type === 'vodootliv' && p.type_izd.includes('+'))
 
   const coldStats = aggregate(coldWindows);
   const hotStats = aggregate(hotWindows);
@@ -67,13 +80,23 @@ const summaryData = computed(() => {
   const allDoor15p = aggregate(allDoors15p)
   const allDoor2p = aggregate(allDoors2p)
 
-  const loggiaStats = aggregate(loggias);
-
+  const loggiaAllStats = aggregate(loggias);
+  const loggiaStvStats = aggregate(loggiasStv);
+  const loggia2StvStats = aggregate(loggias2Stv);
+  const loggia3StvStats = aggregate(loggias3Stv);
+  const loggia4StvStats = aggregate(loggias4Stv);
+  const loggia5StvStats = aggregate(loggias5Stv);
+  const loggia6StvStats = aggregate(loggias6Stv);
 
   const mosquitoAllStats = aggregate(mosquitoAll);
   const mosquitoVsnStats = aggregate(mosquitoVsn);
   const mosquitoMsStats = aggregate(mosquitoMs);
   const mosquitoMixedStats = aggregate(moscuitoMixed);
+
+  const vodootlivAllStats = aggregate(vodootlivAll);
+  const vodootlivVoStats = aggregate(vodootlivVo);
+  const vodootlivOcnStats = aggregate(vodootlivOcn);
+  const vodootlivMixedStats = aggregate(vodootlivMixed);
 
   // Формируем группы для отображения
   const windowGroups = [
@@ -85,11 +108,15 @@ const summaryData = computed(() => {
     { type_izd: 'Всего 2П дверей', profile: '', ...allDoor2p },
   ].filter(g => g.count > 0);
 
-  const loggiaGroup = loggiaStats.count > 0 ? [{
-    type_izd: 'Лоджии',
-    profile: '',
-    ...loggiaStats
-  }] : [];
+  const loggiaTotalGroup = [
+    {type_izd: "Створка", ...loggiaStvStats},
+    {type_izd: "2-створчатая", ...loggia2StvStats},
+    {type_izd: "3-створчатая", ...loggia3StvStats},
+    {type_izd: "4-створчатая", ...loggia4StvStats},
+    {type_izd: "5-створчатая", ...loggia5StvStats},
+    {type_izd: "6-створчатая", ...loggia6StvStats},
+    {type_izd: "Всего лоджии", ...loggiaAllStats},
+  ].filter(g => g.count > 0);
 
   // Общая строка для москиток (для нижней таблицы итогов)
   const mosquitoTotalGroup = [
@@ -97,10 +124,18 @@ const summaryData = computed(() => {
     {type_izd: "Обычная", ...mosquitoMsStats},
     {type_izd: "Комбинированные", ...mosquitoMixedStats},
     {type_izd: "Всего москитных сеток", ...mosquitoAllStats},
-  ];
+  ].filter(g => g.count > 0);
+
+  //vo
+  const vodootlivTotalGroup = [
+    {type_izd: "Водоотлив", ...vodootlivVoStats},
+    {type_izd: "Оцинковка", ...vodootlivOcnStats},
+    {type_izd: "Комбинированные", ...vodootlivMixedStats},
+    {type_izd: "Всего водоотливов", ...vodootlivAllStats},
+  ].filter(g => g.count > 0);
 
   // Общие итоги
-  const total = [allWindowStats, allDoor1p, allDoor15p, allDoor2p, loggiaStats, mosquitoStatsDetailed.value.total]
+  const total = [allWindowStats, allDoor1p, allDoor15p, allDoor2p, loggiaAllStats, mosquitoAllStats, vodootlivAllStats]
       .reduce((acc, g) => ({
         count: acc.count + g.count,
         sqr: acc.sqr + g.sqr,
@@ -117,8 +152,9 @@ const summaryData = computed(() => {
 
   return {
     windowGroups,
-    loggiaGroup,
+    loggiaTotalGroup,
     mosquitoTotalGroup,
+    vodootlivTotalGroup,
     totalRounded
   };
 });
@@ -226,6 +262,7 @@ const formatType = (type) => {
     'loggia': 'Лоджия',
     'mosquito': 'Москитная сетка',
     'glyhar': 'Глухое окно',
+    'vodootliv': 'Водоотлив',
   };
   return map[type] || type;
 };
@@ -309,17 +346,25 @@ const mosquitoStatsDetailed = computed(() => {
     </div>
 
   <!-- Лоджии -->
-  <div v-if="summaryData.loggiaGroup.length > 0" class="summary-stats">
+  <div v-if="summaryData.loggiaTotalGroup.length > 0" class="summary-stats">
     <h4>Лоджии</h4>
     <table class="summary-table">
+      <thead>
+      <tr>
+        <th>Тип</th>
+        <th>Кол-во</th>
+        <th>Площадь, м²</th>
+        <th>Н/час</th>
+        <th>Н/руб</th>
+      </tr>
+      </thead>
       <tbody>
-      <tr v-for="group in summaryData.loggiaGroup" :key="group.type_izd">
-        <td>{{ group.type_izd }}</td>
-        <td>{{ group.profile }}</td>
-        <td>{{ group.count }}</td>
-        <td>{{ group.sqr }}</td>
-        <td>{{ group.hours }}</td>
-        <td>{{ group.money }}</td>
+      <tr v-for="group in summaryData.loggiaTotalGroup" :key="group.type_izd">
+        <td> {{group.type_izd}} </td>
+        <td> {{group.count}} </td>
+        <td> {{group.sqr}} </td>
+        <td> {{group.hours}} </td>
+        <td> {{group.money}} </td>
       </tr>
       </tbody>
     </table>
@@ -350,9 +395,33 @@ const mosquitoStatsDetailed = computed(() => {
     </table>
   </div>
 
+  <div v-if="summaryData.vodootlivTotalGroup.length > 0" class="summary-stats">
+    <h4>Водоотливы</h4>
+    <table class="summary-table">
+      <thead>
+      <tr>
+        <th>Тип</th>
+        <th>Кол-во</th>
+        <th>Площадь, м²</th>
+        <th>Н/час</th>
+        <th>Н/руб</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="group in summaryData.vodootlivTotalGroup" :key="group.type_izd">
+        <td> {{group.type_izd}} </td>
+        <td> {{group.count}} </td>
+        <td> {{group.sqr}} </td>
+        <td> {{group.hours}} </td>
+        <td> {{group.money}} </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
   <!-- Общие итоги -->
   <div v-if="summaryData.totalRounded.count > 0" class="summary-stats total-summary">
-    <h4>Всего за месяц</h4>
+    <h4>Всего за период</h4>
     <table class="summary-table">
       <thead>
       <tr>

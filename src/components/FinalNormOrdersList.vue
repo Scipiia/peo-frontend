@@ -159,23 +159,6 @@ const toDate = ref(
     `${currentYear}-${String(currentMonth).padStart(2, '0')}-${new Date(currentYear, currentMonth, 0).getDate()}`
 )
 
-// const filterFrom = computed(() => {
-//   return `${year.value}-${String(month.value).padStart(2, '0')}-01`;
-// });
-
-// const filterTo = computed(() => {
-//   const nextMonth = new Date(year.value, month.value, 0); // 0 = последний день
-//   const day = String(nextMonth.getDate()).padStart(2, '0');
-//   const mm = String(month.value).padStart(2, '0');
-//   return `${year.value}-${mm}-${day}`;
-// });
-
-// const months = [
-//   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-//   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-// ];
-
-
 //TODO модальное окно
 const editingProduct = ref(null);
 const openEditModal = (product) => {
@@ -185,6 +168,7 @@ const openEditModal = (product) => {
 
 const saveAndClose = async (updatedProduct) => {
   try {
+
     const cleanedProduct = {
       ...updatedProduct,
       sqr: parseFloat(updatedProduct.sqr) || 0,
@@ -192,7 +176,10 @@ const saveAndClose = async (updatedProduct) => {
       coefficient: parseFloat(updatedProduct.coefficient),
       total_time: parseFloat(updatedProduct.total_time) || 0,
       count: parseInt(updatedProduct.count) || 0,
+      sqr_stv: parseFloat(updatedProduct.sqr_stv) || 0,
     };
+
+    //console.log("UPDDDDA", cleanedProduct);
 
     await axios.put(`/api/final/update/${updatedProduct.id}`, cleanedProduct);
 
@@ -237,9 +224,13 @@ const typeGroups = {
     types: ['mosquito']
   },
   vodootliv: {
-    label: 'Водоотлив',
+    label: 'Водоотливы',
     types: ['vodootliv']
-  }
+  },
+  vitrage: {
+    label: 'Витражи',
+    types: ['vitrage']
+  },
 };
 
 // TODO динамические колонки
@@ -251,6 +242,7 @@ const dynamicColumns = computed(() => {
   const hasLoggias = selected.some(t => ['loggia'].includes(t));
   const hasMosquito = selected.some(t => ['mosquito'].includes(t));
   const hasVodootliv = selected.some(t => ['vodootliv'].includes(t));
+  const hasVitrage = selected.some(t =>['vitrage'].includes(t));
 
   const columns = [];
 
@@ -307,6 +299,23 @@ const dynamicColumns = computed(() => {
   if (hasVodootliv) {
     columns.push(
         {key: 'name', label: 'наименование', width: '100px', align: 'center'},
+        {key: 'count', label: 'количество', width: '40px', align: 'center'},
+        {key: 'sqr', label: 'площадь', width: '40px', align: 'center'},
+        {key: 'total_time', label: 'н/час', width: '90px', align: 'center', class: 'col-total'},
+        {key: 'type_izd', label: 'вид изделия', width: '90px', align: 'center'},
+    )
+  }
+
+  if (hasVitrage) {
+    columns.push(
+        {key: 'type', label: 'наименование', width: '100px', align: 'center'},
+        {key: 'systema', label: 'система', width: '90px', align: 'center'},
+        {key: 'sqr_stv', label: 'категория', width: '90px', align: 'center'},
+        //{key: 'profile', label: 'категория', width: '90px', align: 'center'},
+        {key: 'type_izd', label: 'система', width: '100px', align: 'center'},
+        {key: 'count', label: 'количество', width: '40px', align: 'center'},
+        {key: 'sqr', label: 'площадь', width: '40px', align: 'center'},
+        {key: 'total_time', label: 'н/час', width: '90px', align: 'center', class: 'col-total'},
     )
   }
 
@@ -336,7 +345,7 @@ const getValueByColumn = (product, columnKey) => {
   // 3. Форматирование чисел
   if (typeof value === 'number') {
     // Для денег и площадей — 3 знака после запятой
-    if (['sqr', 'sqr_stv', 'norm_money', 'total_time'].includes(columnKey)) {
+    if (['sqr', 'norm_money', 'total_time'].includes(columnKey)) {
       return parseFloat(value.toFixed(3));
     }
     // Для количества — целое число
@@ -375,31 +384,56 @@ const products = ref([]);
 
 
 // Присваиваем порядковые номера
+// const productsWithRowNumber = computed(() => {
+//   const list = products.value || [];
+//
+//   const sortedList = [...list].sort((a, b) => {
+//     // Сначала сравниваем по ready_date
+//     const dateA = a.ready_date ? new Date(a.ready_date) : new Date(0);
+//     const dateB = b.ready_date ? new Date(b.ready_date) : new Date(0);
+//     const dateDiff = dateB - dateA; // DESC: свежие первыми
+//
+//     if (dateDiff !== 0) return dateDiff;
+//
+//     // Если оба main или оба sub — по ID (стабильность)
+//     return a.id - b.id;
+//   });
+//
+//   const mainIdToRowNumber = new Map();
+//   let counter = 1;
+//   for (const item of sortedList) {
+//     if (item.part_type === 'main') {
+//       mainIdToRowNumber.set(item.id, counter++);
+//     }
+//   }
+//
+//   // 3. Добавляем rowNumber ко всем изделиям
+//   return sortedList.map(product => {
+//     let rowNumber = 0;
+//     if (product.part_type === 'main') {
+//       rowNumber = mainIdToRowNumber.get(product.id) || 0;
+//     } else if (product.part_type === 'sub' && product.parent_product_id) {
+//       rowNumber = mainIdToRowNumber.get(product.parent_product_id) || 0;
+//     }
+//     return { ...product, rowNumber };
+//   });
+// });
+
 const productsWithRowNumber = computed(() => {
   const list = products.value || [];
 
-  const sortedList = [...list].sort((a, b) => {
-    // Сначала сравниваем по ready_date
-    const dateA = a.ready_date ? new Date(a.ready_date) : new Date(0);
-    const dateB = b.ready_date ? new Date(b.ready_date) : new Date(0);
-    const dateDiff = dateB - dateA; // DESC: свежие первыми
-
-    if (dateDiff !== 0) return dateDiff;
-
-    // Если оба main или оба sub — по ID (стабильность)
-    return a.id - b.id;
-  });
-
+  // Просто проходим по списку в том порядке, в котором он пришел с бэка
   const mainIdToRowNumber = new Map();
   let counter = 1;
-  for (const item of sortedList) {
+
+  for (const item of list) {
     if (item.part_type === 'main') {
       mainIdToRowNumber.set(item.id, counter++);
     }
   }
 
-  // 3. Добавляем rowNumber ко всем изделиям
-  return sortedList.map(product => {
+  // Добавляем rowNumber ко всем изделиям
+  return list.map(product => {
     let rowNumber = 0;
     if (product.part_type === 'main') {
       rowNumber = mainIdToRowNumber.get(product.id) || 0;
@@ -428,6 +462,7 @@ const formatType = (type) => {
     'vitrage': 'Витраж',
     'mosquito': 'Москитная сетка',
     'glyhar': 'Глухое окно',
+    'vodootliv': 'Водоотлив'
   };
 
   return map[type] || type;
@@ -442,24 +477,22 @@ const getValue = (product, employeeId) => {
 const loadData = async () => {
   try {
     const params = new URLSearchParams();
-
-    // Отправляем каждый активный тип как ?type=...
-    activeBackendTypes.value.forEach(type => {
-      params.append('type', type);
-    });
-
-    // Диапазон дат по месяцу
+    activeBackendTypes.value.forEach(type => params.append('type', type));
     params.append('from', fromDate.value);
     params.append('to', toDate.value);
     params.append('order_num', orderNum.value);
 
-
+    // 🔥 Очищаем данные перед новым запросом
+    products.value = [];
+    employees.value = [];
 
     const res = await axios.get(`/api/all_final_order?${params}`);
+
+    // Проверяем, что это актуальный ответ (опционально, но полезно)
     employees.value = res.data.employees;
     products.value = res.data.products;
 
-    //console.log(products.value);
+    //console.log(products.value)
 
   } catch (error) {
     console.error('Ошибка загрузки данных:', error);

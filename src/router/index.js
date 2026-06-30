@@ -8,6 +8,7 @@ import EditNormOrder from "@/components/EditNormOrder.vue";
 import AssignWorkers from "@/components/AssignWorkers.vue";
 import FinalNormOrdersList from "@/components/FinalNormOrdersList.vue";
 import NashchelnikCalculator from "@/components/NashchelnikCalculator.vue";
+import AssignWorkersVitrage from "@/components/AssignWorkersVitrage.vue";
 //admin
 import AdminPanel from "@/components/admin/AdminPanel.vue";
 import AdminTemplates from '@/components/admin/AdminTemplates.vue'
@@ -26,6 +27,7 @@ const routes = [
     {path: "/norm/workers/:id", name: "AssignWorkers", component: AssignWorkers},
     {path: "/final/orders", name: "FinalNormOrdersList", component: FinalNormOrdersList},
     {path: "/norm/calc-nasheln", name: "NashchelnikCalculator", component: NashchelnikCalculator},
+    {path: "/norm/workers/vitrage/:id", name: "AssignWorkersVitrage", component: AssignWorkersVitrage},
 
     //админка
     // Маршрут админки с вложенными дочерними маршрутами

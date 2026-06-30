@@ -219,8 +219,22 @@ const goToWorkers = async (order) => {
         });
         return;
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   }
+  // } else if (order.type === 'vitrage') {
+  //   router.push({
+  //     name: "AssignWorkersVitrage",
+  //     params: {id: order.id},
+  //     query: {
+  //       source: order.type,
+  //       order_num: order.order_num,
+  //       time: order.total_time,
+  //     }
+  //   });
+  //   return;
+  // }
 
   // Стандартный переход
   router.push({

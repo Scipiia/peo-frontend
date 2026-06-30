@@ -46,9 +46,22 @@ const profileType = [
   {value: 'ш', label: 'Шуко'},
 ]
 
+const profileVitrage = [
+  {value: 'Алютех', label: 'Алютех'},
+  {value: '45', label: '45'},
+  {value: '74', label: '74'},
+]
+
 const systemaType = [
   {value: 'х', label: 'Холодная'},
   {value: 'т', label: 'Тёплая'},
+]
+
+const categoryVitrage = [
+  '1',
+  '2',
+  '3',
+  '4',
 ]
 
 const isDoor = computed(() => {
@@ -63,8 +76,16 @@ const isMosquito = computed(() => {
   return localProduct.value.type === 'mosquito';
 })
 
+const isVodootliv = computed(() => {
+  return localProduct.value.type === 'vodootliv';
+})
+
+const isVitrage = computed(() => {
+  return localProduct.value.type === 'vitrage';
+})
+
 // список бригад
-const brigadeTypeOptions = ['бригада', 'бригада окон, дверей', 'бригада лоджий'];
+const brigadeTypeOptions = ['бригада', 'бригада окон, дверей', 'бригада лоджий', 'бригада витражей'];
 
 // === Валидация ===
 const errors = ref({});
@@ -72,11 +93,9 @@ const errors = ref({});
 const validate = () => {
   errors.value = {};
 
-  // Базовые обязательные поля для всех типов
+  // Базовые поля
   const baseFields = [
-    { key: 'type_izd', label: 'Наименование' },
     { key: 'sqr', label: 'Площадь' },
-      //{ key: 'brigade', label: 'Бригада' },
     { key: 'norm_money', label: 'Н/руб' },
     { key: 'customer_type', label: 'Направление заказчика' },
     { key: 'coefficient', label: 'Коэффициент' }
@@ -84,23 +103,27 @@ const validate = () => {
 
   let conditionalFields = [];
 
-  // Поля, которые нужны только для НЕ-лоджий
-  // Система и Профиль нужны всем, кроме Лоджий и Москиток
-  if (!isLoggia.value && !isMosquito.value) {
+  if (isVitrage.value) {
+    // Для витражей проверяем sqr_stv, systema, profile
     conditionalFields.push(
+        { key: 'sqr_stv', label: 'Категория сложности' },
         { key: 'systema', label: 'Система' },
         { key: 'profile', label: 'Профиль' }
     );
-  }
-
-  // Бригада нужна всем, кроме Москиток (ЛОджиям оставим, если нужно, или тоже уберите условие isLoggia)
-  if (!isMosquito.value) {
-    conditionalFields.push({ key: 'brigade', label: 'Бригада' });
+  } else if (!isLoggia.value && !isMosquito.value && !isVodootliv.value) {
+    // Для окон, дверей и т.д.
+    conditionalFields.push(
+        { key: 'type_izd', label: 'Наименование' },
+        { key: 'systema', label: 'Система' },
+        { key: 'profile', label: 'Профиль' }
+    );
+  } else if (isLoggia.value) {
+    // Для лоджий
+    conditionalFields.push({ key: 'type_izd', label: 'Наименование' });
   }
 
   const allRequired = [...baseFields, ...conditionalFields];
 
-  // Проверка на пустые строки
   allRequired.forEach(field => {
     const value = localProduct.value[field.key];
     if (!value || (typeof value === 'string' && !value.trim())) {
@@ -108,7 +131,7 @@ const validate = () => {
     }
   });
 
-  // Проверка числовых полей
+  // Числовые проверки
   if (isNaN(parseFloat(localProduct.value.sqr)) || parseFloat(localProduct.value.sqr) < 0) {
     errors.value.sqr = true;
   }
@@ -120,13 +143,48 @@ const validate = () => {
 };
 
 // === Вычисляем, валидна ли форма ===
+// === Вычисляем, валидна ли форма (ЧИСТЫЙ COMPUTED, БЕЗ МУТАЦИЙ) ===
 const isFormValid = computed(() => {
-  return validate();
+  const p = localProduct.value;
+
+  // Базовые обязательные поля для всех типов
+  if (!p.sqr || parseFloat(p.sqr) <= 0) return false;
+  if (!p.norm_money || parseFloat(p.norm_money) <= 0) return false;
+  if (!p.customer_type) return false;
+  if (!p.coefficient || parseFloat(p.coefficient) <= 0) return false;
+
+  // Проверки для витражей
+  if (isVitrage.value) {
+    if (!p.sqr_stv) return false;           // Категория сложности
+    if (!p.systema) return false;           // Система (х/т)
+    if (!p.profile) return false;           // Профиль
+    return true;
+  }
+
+  // Проверки для лоджий, москиток, водоотливов
+  if (isLoggia.value || isMosquito.value || isVodootliv.value) {
+    if (!isMosquito.value && !isVodootliv.value) {
+      // Лоджиям нужен type_izd
+      if (!p.type_izd) return false;
+    }
+    return true;
+  }
+
+  // Для остальных (окна, двери и т.д.)
+  if (!p.type_izd || !p.type_izd.trim()) return false;
+  if (!p.systema) return false;
+  if (!p.profile) return false;
+
+  return true;
 });
 
 // === Сохранение ===
 const save = () => {
   if (validate()) {
+    if (isVitrage.value && vitrageSystemString.value) {
+      localProduct.value.type_izd = vitrageSystemString.value;
+    }
+
     emit('close', localProduct.value);
   }
 };
@@ -182,6 +240,19 @@ const initNormMoney = () => {
   }
 };
 
+const vitrageSystemString = computed(() => {
+  if (!isVitrage.value) return '';
+
+  const category = localProduct.value.sqr_stv || ''; // Категория сложности (1, 2, 3, 4)
+  const profile = localProduct.value.profile || '';   // Профиль (Алютех, 45, 74)
+  const system = localProduct.value.systema || '';    // Система (х, т)
+
+  // Если хотя бы одно поле пустое, не показываем строку
+  if (!category || !profile || !system) return '';
+
+  return `${category}/${profile} ${system}`;
+});
+
 // Выполняем инициализацию сразу
 initNormMoney();
 
@@ -196,7 +267,7 @@ const cancel = () => {
       <h3>Редактирование изделия</h3>
 
       <!-- Спецификация (необязательное поле) -->
-      <div v-if="!isMosquito && !isLoggia" class="form-group">
+      <div v-if="!isMosquito && !isLoggia && !isVodootliv && !isVitrage" class="form-group">
         <label>Спецификация</label>
         <input
             v-model="localProduct.parent_assembly"
@@ -206,8 +277,8 @@ const cancel = () => {
       </div>
 
       <!-- Наименование -->
-      <div class="form-group" :class="{ 'error': errors.type_izd }">
-        <label>Наименование</label>
+      <div class="form-group" :class="{ 'error': isVitrage ? errors.sqr_stv : errors.type_izd }">
+        <label>{{ isVitrage ? 'Категория сложности' : 'Наименование' }}</label>
 
         <!-- Для дверей — выпадающий список -->
         <select
@@ -236,6 +307,19 @@ const cancel = () => {
           </option>
         </select>
 
+        <select
+            v-else-if="isVitrage"
+            v-model="localProduct.sqr_stv"
+            class="form-select"
+            :class="{ 'invalid': errors.sqr_stv }"
+            @change="validate"
+        >
+          <option value="" disabled>Выберите тип витража</option>
+          <option v-for="optVitrage in categoryVitrage" :key="optVitrage" :value="optVitrage">
+            {{ optVitrage }}
+          </option>
+        </select>
+
         <!-- Для остальных — обычное поле -->
         <input
             v-else
@@ -245,7 +329,9 @@ const cancel = () => {
             @blur="validate"
         />
 
-        <span v-if="errors.type_izd" class="error-text">Укажите наименование</span>
+        <span v-if="isVitrage ? errors.sqr_stv : errors.type_izd" class="error-text">
+          {{ isVitrage ? 'Выберите категорию сложности' : 'Укажите наименование' }}
+        </span>
       </div>
 
       <!-- Направление заказчика -->
@@ -270,7 +356,7 @@ const cancel = () => {
       </div>
 
       <!-- Система -->
-      <div v-if="!isLoggia && !isMosquito" class="form-group" :class="{ 'error': errors.systema }">
+      <div v-if="!isLoggia && !isMosquito && !isVodootliv" class="form-group" :class="{ 'error': errors.systema }">
         <label>Система</label>
         <select
             v-model="localProduct.systema"
@@ -291,25 +377,54 @@ const cancel = () => {
       </div>
 
       <!-- Профиль -->
-      <div v-if="!isLoggia && !isMosquito" class="form-group" :class="{ 'error': errors.profile }">
+      <div v-if="!isLoggia && !isMosquito && !isVodootliv" class="form-group" :class="{ 'error': errors.profile }">
         <label>Профиль</label>
         <select
-          v-model="localProduct.profile"
-          class="form-select"
-          :class="{'invalid': errors.profile}"
-          @change="validate"
+            v-if="isVitrage"
+            v-model="localProduct.profile"
+            class="form-select"
+            :class="{'invalid': errors.profile}"
+            @change="validate"
         >
           <option value="" disabled>— Выберите профиль —</option>
           <option
-            v-for="opt in profileType"
+            v-for="opt in profileVitrage"
             :key="opt.value"
             :value="opt.value"
           >
             {{ opt.label }}
           </option>
-
         </select>
+
+          <select
+              v-else
+              v-model="localProduct.profile"
+              class="form-select"
+              :class="{'invalid': errors.profile}"
+              @change="validate"
+          >
+            <option value="" disabled>— Выберите профиль —</option>
+            <option
+                v-for="opt in profileType"
+                :key="opt.value"
+                :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
+          </select>
         <span v-if="errors.profile" class="error-text">Укажите профиль</span>
+      </div>
+
+      <!-- Итоговая составная строка (readonly) -->
+      <div v-if="vitrageSystemString" class="form-group">
+        <label>Итоговая система</label>
+        <input
+            :value="vitrageSystemString"
+            type="text"
+            class="form-input"
+            readonly
+            style="background-color: #f0f0f0; font-weight: bold; color: #333;"
+        />
       </div>
 
       <!-- Площадь -->
@@ -328,7 +443,7 @@ const cancel = () => {
       </div>
 
       <!-- Бригада -->
-      <div v-if="!isMosquito" class="form-group" :class="{ 'error': errors.brigade }">
+      <div v-if="!isMosquito && !isVodootliv" class="form-group" :class="{ 'error': errors.brigade }">
         <label>Бригада</label>
         <select
             v-model="localProduct.brigade"
