@@ -1,23 +1,29 @@
 <template>
   <div id="app">
-    <!-- Навигационная панель (не отображается при печати) -->
-    <nav class="navbar no-print">
+    <!-- Навигационная панель (скрыта на странице входа и при печати) -->
+    <nav v-if="showNavbar" class="navbar no-print">
       <div class="nav-container">
         <div class="nav-logo">
           <img src="../public/logo_pasport_new.jpg" alt="Логотип NormApp" class="logo-img" />
           <span></span>
         </div>
-        <ul class="nav-menu">
-          <li class="nav-item">
-            <router-link to="/orders" class="nav-link">Заказы из ДЕМ</router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/norm/orders/" class="nav-link">Нормированные наряды</router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/final/orders/" class="nav-link">Отчёты для ПЭО</router-link>
-          </li>
-        </ul>
+
+        <!-- Правая часть: меню + блок пользователя -->
+        <div class="nav-right">
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <router-link to="/orders" class="nav-link">Заказы из ДЕМ</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/norm/orders/" class="nav-link">Нормированные наряды</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/final/orders/" class="nav-link">Отчёты для ПЭО</router-link>
+            </li>
+          </ul>
+
+          <UserMenu />
+        </div>
       </div>
     </nav>
 
@@ -29,8 +35,19 @@
 </template>
 
 <script>
+import UserMenu from '@/components/UserMenu.vue'
+
 export default {
-  name: 'App'
+  name: 'App',
+  components: {
+    UserMenu
+  },
+  computed: {
+    // Скрываем навбар на публичных страницах (сейчас это только /login)
+    showNavbar() {
+      return !this.$route.meta.public
+    }
+  }
 }
 </script>
 
@@ -86,6 +103,13 @@ body {
   height: 40px;
   width: auto;
   border-radius: 6px;
+}
+
+/* Правая часть навбара: меню + пользователь */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .nav-menu {
@@ -161,6 +185,20 @@ body {
     flex-direction: column;
     gap: 10px;
     padding: 12px 16px;
+  }
+
+  .nav-right {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .user-block {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 10px;
+    justify-content: center;
   }
 
   .nav-menu {
