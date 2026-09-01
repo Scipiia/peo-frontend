@@ -452,7 +452,7 @@ const groupedTemplates = computed(() => {
     groups[cat] = [];
   });
 
-  allTemplates.value?.Template?.forEach(tpl => {
+  allTemplates.value?.forEach(tpl => {
     const cat = tpl.category?.toLowerCase().trim();
     if (categories.includes(cat)) {
       groups[cat].push(tpl);
