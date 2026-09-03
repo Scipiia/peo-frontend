@@ -107,7 +107,7 @@ const saveAndProceed = async () => {
     operations: operationsToSend
   };
 
-  console.log('Отправляем на бэкэнд:', payload);
+  //console.log('Отправляем на бэкэнд:', payload);
 
   try {
     const res = await fetch('/api/orders/nashchelnik/calc', {
@@ -141,7 +141,6 @@ const operationNorms = {
   'Гиб': '38,25 сек до 1,3 м | 42,5 сек от 1,3 м',
   'Отбортовка': '19,125 сек до 1,3 м | 21,25 сек от 1,3 м',
   'Упаковка': '3 мин на 1 уп(10шт)',
-  // ... добавишь остальные, когда ПДО дадут данные
 };
 
 function getNormDescription(opName) {

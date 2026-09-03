@@ -82,31 +82,20 @@ onMounted(() => {
 // Функция получения заказов
 async function fetchOrders() {
   try {
-    orders.value = [];
     errorMessage.value = '';
 
     const params = {};
 
-    // Если есть поиск — игнорируем месяц и год
     if (search.value) {
       params.search = search.value;
-      // Можно добавить флаг, чтобы бэкенд знал, что ищем глобально
-      // params.globalSearch = true;
     } else {
-      // Иначе фильтруем по дате
       params.year = year.value;
       params.month = month.value;
     }
 
-    //TODO Добавить поиск по номеру заказа
-    const response = await axios.get('/api/orders', {params});
+    const response = await axios.get('/api/orders', { params });
 
-    //console.log("RESP", response);
-    if (response.data.error) {
-      errorMessage.value = response.data.error;
-    } else {
-      orders.value = response.data.orders;
-    }
+    orders.value = response.data;
   } catch (error) {
     errorMessage.value = 'Не удалось загрузить заказы.';
     console.error(error);
