@@ -801,7 +801,7 @@ function saveNormirovka() {
   //console.log(payload);
 
   // Отправляем
-  fetch('/api/orders/order-norm/template', {
+  fetch('/api/orders/order-norm/operations', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
