@@ -6,7 +6,7 @@
     <div v-if="loading">Загрузка...</div>
     <div v-else-if="error" class="error">Ошибка: {{ error }}</div>
 <!--    <div>{{ templates.Template }}</div>-->
-    <table class="templates-table" v-if="templates.Template && templates.Template.length">
+    <table class="templates-table" v-if="templates.length">
       <thead>
       <tr>
         <th>ID</th>
@@ -17,7 +17,7 @@
       </tr>
       </thead>
       <tbody>
-      <tr v-for="template in templates.Template" :key="template.id">
+      <tr v-for="template in templates" :key="template.id">
         <td>{{ template.ID }}</td>
         <td>{{ template.code }}</td>
         <td>{{ template.category }}</td>
@@ -28,7 +28,7 @@
       </tr>
       </tbody>
     </table>
-    <div v-else-if="!loading && (!templates.Template || templates.Template.length === 0)">
+    <div v-else-if="!loading && (!templates || templates.length === 0)">
       Шаблоны не найдены
     </div>
   </div>
@@ -51,6 +51,7 @@ async function fetchTemplates() {
     const res = await fetch('/api/admin/all_templates') // или 'http://localhost:8080/api/admin/templates', но лучше без хоста
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     templates.value = await res.json()
+  console.log(templates.value);
   } catch (err) {
     console.error('Ошибка загрузки шаблонов:', err)
     error.value = err.message
