@@ -418,19 +418,24 @@ const OP_GROUPS_CONFIG = [
     names: ["nastr_for_napil", "napil_bez_impost", "dop_impost_napil", "nastr_pbx", "pzr", "rabota_pbx", "podg_obor", "napil_ram_stv", "napil_don_soed", "napil_shtylp", "impost_napil", "nastr_pbx_vo",
     "meh_obr_pzr", "rab_pbx_vo2", "frez_yst_shtylp_win", "obr_stv", "napil_donn", "napil_shtylp", "yst_adapt24", "napil_adapt24", "obr_ram_vo2", "napil_ugol", "napil", "nastr_obr_napil",
     "napil_kontyr", "napil_krishek", "napil_stoik_do3m", "napil_ygol_30x30", "napil_rigel_do1m", "napil_rigel_bol1m", "napil_stoik_bol3m", "napil_stv", "napil_ram", "frezer_vo2", "meh_obr_rychka",
-      "nastr_stan_napil", "obr_ram", "podg_obr_ram", "napil_ram_log", "napil_stv_log", "napil_pritvor_log", "napil_soed_log"]
+      "nastr_stan_napil", "obr_ram", "podg_obr_ram", "napil_ram_log", "napil_stv_log", "napil_soed_log", "frezer_stv_log"]
+  },
+   {
+    title: "Сборка ств и притвора лоджии",
+    names: ["sborka_pritvor_log", "napil_pritvor_log"]
   },
   {
     title: "Фрезеровка",
     names: ["frezer_nastr", "frezer_porog_sverl_promej_sbor", "opres_nastr", "opres", "frezer_porog_promej_sbor", "frez_yst_shtylp_door", "frezer_porog_ram_porog_shping_promej_sb", "sles_obr_yst_furn",
     "promej_sb_stv", "promej_sb_ram", "imp_frezer", "impost_sverlo", "impost_yst", "impost_frezer", "razm_sverl_otv", "promej_sb", "imp_sbor", "shtift", "yst_yplotn", "promej_sb2", "promej_sb_2ygl",
     "promej_sb_2ygl_nest", "frezer_std_prof", "yst_zamkov", "promej_sb_3ygl_nest", "frezer2st_5nastr", "opres_4ygl", "sverl_rigel_zamok_2stor_frezer", "frezer_porog_sverl", "promej_sbor", "dop_impost_frezer",
-     "dop_impost_sverl", "dop_impost_yst", "frezer_porog", "frezer_porog_ram_porog_shping", "opres_stv", "opres_ram", "frezer_ram_log", "frezer_stv_log", "frezer_pritvor_log"]
+     "dop_impost_sverl", "dop_impost_yst", "frezer_porog", "frezer_porog_ram_porog_shping", "opres_stv", "opres_ram", "frezer_ram_log", "frezer_pritvor_log", "shtamp_stoek_log", "ystan_rolik_fetr_log",
+    "ystan_zashel_fetr_log", "sborka_stv_log", "upak_log"]
   },
-  {
-    title: "Штамповка стоек лодж",
-    names: ["shtamp_stoek_log"]
-  },
+  // {
+  //   title: "Штамповка стоек лодж",
+  //   names: ["shtamp_stoek_log"]
+  // },
   {
     title: "Брусок кп45",
     names: ["krepl_brys", "podg_derj_shetki_frez"]
@@ -438,17 +443,13 @@ const OP_GROUPS_CONFIG = [
   {
     title: "Установка",
     names: ["yst_porog_ypl_derj_shetk_shtift", "podg_derj_shetki", "yst_porog_ypl_derj_shetk_ydal_germ_yst_zaglysh", "yst_porog_ypl_derj_shetk", "yst_ypl", "yst_ypl_ugl_shtift",  "yst_zpl_podg_shtapik",
-    "yst_ypl_shtift", "yst_ypl_ugl_shtift_germet", "ystan_rolik_fetr_log", "ystan_zashel_fetr_log"]
+    "yst_ypl_shtift", "yst_ypl_ugl_shtift_germet"]
   },
   {
     title: "Обработка и сборка замки",
     names: ["sbor_petli", "yst_dver_mnogozap_zamok_nakl_cilindr_stubl_yst_otv_plan23", "yst_dvr_zamok_nakl_cild_antipan", "navesh_stv_yst_otv_plan1_reg_petli", "navesh_stv_yst_otvplan_petl_rdrh",
     "yst_dver_zamok_nakl_cilindr", "navesh_stv_yst_otv_plan", "yst_dver_zamok_nakl_cilindr_stubl", "navesh_stv_yst_otv_plank_reg_petli", "napil_tag_stv", "obr_tag_stv", "podg_furn",
-    "yst_furn_stv", "navesh_ram_stv", "sbor_rychek", "rybka_tag", "podg_tag_yst_stv", "yst_furn", "navesh_ram", "obrezen_log"]
-  },
-  {
-    title: "Сборка ств и притвора лоджии",
-    names: ["sborka_stv_log", "sborka_pritvor_log"]
+    "yst_furn_stv", "navesh_ram_stv", "sbor_rychek", "rybka_tag", "podg_tag_yst_stv", "yst_furn", "navesh_ram", "obrezen_log", "podg_komp_log"]
   },
   {
     title: "Уплотнители",
